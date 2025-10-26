@@ -26,9 +26,5 @@ dev = [
 ]
 
 [build-system]
-requires = ["setuptools>=61.0.0", "wheel"]
-build-backend = "setuptools.build_meta"
-
-# [build-system]
-# requires = ["uv_build>=0.9.3,<0.10.0"]
-# build-backend = "uv_build"
+requires = ["uv_build"]
+build-backend = "uv_build"

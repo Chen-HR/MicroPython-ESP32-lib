@@ -1,4 +1,4 @@
-# .gitignore
+# .gitignore (https://github.com/github/gitignore/blob/main/Python.gitignore)
 
 # Environments
 venv/
@@ -6,20 +6,21 @@ venv/
 env/
 .env/
 
-# Build
-dist/
-.dist/
+# Distribution / packaging
 build/
-.build/
-*.whl
+dist/
+eggs/
+.eggs/
+*.egg-info/
+*.egg
 
 # IDE
 .vscode/
 
-# Cache
+# Byte-compiled / optimized / DLL files
 __pycache__/
-*.pyc
-*.pyo
+*.py[codz]
+*$py.class
 
 # Other
 *.bak
