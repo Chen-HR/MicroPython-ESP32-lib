@@ -1,0 +1,29 @@
+# .gitignore
+
+# Environments
+venv/
+.venv/
+env/
+.env/
+
+# Build
+dist/
+.dist/
+build/
+.build/
+*.whl
+
+# IDE
+.vscode/
+
+# Cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Other
+*.bak
+*.swp
+*.log
+*.tmp
+*.temp
