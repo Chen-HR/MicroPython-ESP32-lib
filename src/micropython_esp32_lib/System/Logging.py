@@ -2,11 +2,11 @@
 try: 
   from . import Time
   from . import Sleep
-  from . import Code
+  from . import Enum
 except ImportError:
   from micropython_esp32_lib.System import Time
   from micropython_esp32_lib.System import Sleep
-  from micropython_esp32_lib.System import Code
+  from micropython_esp32_lib.System import Enum
 
 # --- Log Handler Interface (DIP) ---
 class LogHandler:
@@ -117,18 +117,23 @@ except Exception:
     return Lock()
   _log_lock: Lock = allocate_lock()
 
-class Level(Code.Code):
+class Level(Enum.Unit):
+  """Represents a logging level."""
+  def __init__(self, name: str, level: int):
+    super().__init__(name, level)
   def __repr__(self) -> str:
-    return f"Level({self.name}, {self.code})"
+    return f"Level({self.name}, {self.value})"
   def lower(self, level) -> bool:
-    _level: Level = level
-    return self.code < _level.code
+    # _level: Level = level
+    if isinstance(level, Level):
+      return self.value < level.value
+    raise ValueError(f"Can't compare with {type(level)}")
 class LEVEL:
-  DEBUG   = Level.define("DEBUG", 0)
-  INFO    = Level.define("INFO", 1)
-  WARNING = Level.define("WARNING", 2)
-  ERROR   = Level.define("ERROR", 3)
-  NONE    = Level.define("NONE", 4)
+  DEBUG   = Level("DEBUG", 0)
+  INFO    = Level("INFO", 1)
+  WARNING = Level("WARNING", 2)
+  ERROR   = Level("ERROR", 3)
+  NONE    = Level("NONE", 4)
 
 class Log: 
   time_formatter = Time.Time

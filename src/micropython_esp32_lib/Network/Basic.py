@@ -3,13 +3,17 @@ import network
 
 try: 
   from ..System import Logging
-  from ..System import Code
+  from ..System import Enum
 except ImportError:
   from micropython_esp32_lib.System import Logging
-  from micropython_esp32_lib.System import Code
+  from micropython_esp32_lib.System import Enum
 
-class Statu(Code.Code):
-  pass
+class Statu(Enum.Unit):
+  """WLAN connection status constants (network.STAT_*)"""
+  def __init__(self, name: str, code: int) -> None:
+    super().__init__(name, code)
+  def __repr__(self) -> str:
+    return f"Statu({self.name}, {self.value})"
 class STATU:
   """WLAN connection status constants (network.STAT_*)"""
   # Define fallback values in case MicroPython's network module lacks them
@@ -29,8 +33,12 @@ class STATU:
   except AttributeError:
     Logging.Log("Network Constants Status", Logging.LEVEL.WARNING).warning("Network status constants (`network.STAT_*`) not fully found. Using internal fallbacks.")
 
-class PowerManagement(Code.Code):
-  pass
+class PowerManagement(Enum.Unit):
+  """WLAN power management modes (network.PM_*)"""
+  def __init__(self, name: str, id: int):
+    super().__init__(name, id)
+  def __repr__(self) -> str:
+    return f"PowerManagement({self.name}, {self.value})"
 class PM:
   """WLAN power management modes (network.PM_*)"""
   # MicroPython PM modes (often 0, 1, 2)
@@ -48,8 +56,12 @@ class PM:
       POWERSAVE : PowerManagement = PowerManagement("POWERSAVE" ,network.WLAN.PM_POWERSAVE)
     except AttributeError:
       Logging.Log("Network Constants Power Management", Logging.LEVEL.WARNING).warning("Network power management constants (`network.PM_*`) not fully found. Using internal fallbacks.")
-class Mode(Code.Code):
-  pass
+class Mode(Enum.Unit):
+  """WLAN operating modes (network.MODE_*)"""
+  def __init__(self, name: str, id: int):
+    super().__init__(name, id)
+  def __repr__(self) -> str:
+    return f"Mode({self.name}, {self.value})"
 class MODE:
   """WLAN operating modes (network.MODE_*)"""
   STA : Mode = Mode("STA", 1) # Station mode (client)

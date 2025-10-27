@@ -6,9 +6,9 @@ try:
   from ..System import Sleep
   from . import Basic as NetworkBasic
 except ImportError:
-  from micropython_esp32_lib.System import Logging
-  from micropython_esp32_lib.System import Sleep
-  from micropython_esp32_lib.Network import Basic as NetworkBasic
+  from HRChen.System import Logging
+  from HRChen.System import Sleep
+  from HRChen.Network import Basic as NetworkBasic
 
 class Config:
   """Configuration container for WLAN connection and settings."""
@@ -257,19 +257,19 @@ class Connector:
       self.logger.warning("Connection aborted: SSID not provided.")
       return False
     # Wait for the connection process to complete
-    if self.wlan.status() == NetworkBasic.STATU.CONNECTING.code:
+    if NetworkBasic.Statu("", self.wlan.status()) == NetworkBasic.STATU.CONNECTING:
       for i in range(retry_count):
         self.logger.info("Wifi connecting... ({}/{})".format(i+1, retry_count))
-        if Sleep.sync_wait_until(lambda: self.wlan.status() != NetworkBasic.STATU.CONNECTING.code, timeout_ms=timeout_ms, interval_ms=self.interval_ms):
+        if Sleep.sync_wait_until(lambda: NetworkBasic.Statu("", self.wlan.status()) != NetworkBasic.STATU.CONNECTING, timeout_ms=timeout_ms, interval_ms=self.interval_ms):
           self.logger.info("Wifi connected.")
           break
         else:
           self.logger.warning("Wifi connection timeout.")
           return False
-    if self.wlan.status() == NetworkBasic.STATU.IDLE.code:
+    if NetworkBasic.Statu("", self.wlan.status()) == NetworkBasic.STATU.IDLE:
       for i in range(retry_count):
         self.logger.info("Wifi idle... ({}/{})".format(i+1, retry_count))
-        if Sleep.sync_wait_until(lambda: self.wlan.status() != NetworkBasic.STATU.IDLE.code, timeout_ms=timeout_ms, interval_ms=self.interval_ms):
+        if Sleep.sync_wait_until(lambda: NetworkBasic.Statu("", self.wlan.status()) != NetworkBasic.STATU.IDLE, timeout_ms=timeout_ms, interval_ms=self.interval_ms):
           self.logger.info("Wifi idle.")
           break
         else:
@@ -280,8 +280,7 @@ class Connector:
     final_status = NetworkBasic.Statu("final_status", self.wlan.status())
     if final_status == NetworkBasic.STATU.GOT_IP:
       ip_config: tuple[str, str, str, str] = self.wlan.ifconfig()
-      self.logger.info(f"WiFi connected successfully.")
-      self.logger.info(f"HostName: {self.getHostname()}, IP: {(ip_config[0])}, Netmask: {ip_config[1]}, Gateway: {ip_config[2]}, DNS: {ip_config[3]}")
+      self.logger.info(f"WiFi connected successfully. HostName: {self.getHostname()}, IP: {(self.getHostIP())}")
       return True
     elif final_status == NetworkBasic.STATU.IDLE:
       self.logger.warning("WiFi connection failed: idle status")
@@ -335,20 +334,23 @@ class Connector:
     return self.wlan.config(configName)
   def getSSID(self) -> str:
     return self.wlan.config("essid")
-  def getIfConfig(self):
-    return self.wlan.ifconfig()
-  def getIPV4Address(self) -> NetworkBasic.IPV4Address:
+  def getPassword (self) -> str:
+    return self.wlan.config("password")
+  def getHostIP(self) -> NetworkBasic.IPV4Address:
     return NetworkBasic.IPV4Address(self.wlan.ifconfig()[0])
+  def getNetmask(self) -> NetworkBasic.IPV4Address:
+    return NetworkBasic.IPV4Address(self.wlan.ifconfig()[1])
+  def getGateway(self) -> NetworkBasic.IPV4Address:
+    return NetworkBasic.IPV4Address(self.wlan.ifconfig()[2])
+  def getDNS(self) -> NetworkBasic.IPV4Address:
+    return NetworkBasic.IPV4Address(self.wlan.ifconfig()[3])
   def getMac(self) -> str:
     return self.wlan.config("mac")
   def getHostname(self) -> str:
     try: 
       return self.wlan.config("dhcp_hostname")
     except:
-      try: 
-        return self.wlan.config("hostname")
-      except:
-        return ""
+      return self.wlan.config("hostname")
 
 if __name__ == '__main__':
   logger = Logging.Log("Test Network", Logging.LEVEL.INFO)
