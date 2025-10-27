@@ -329,6 +329,10 @@ class Connector:
     else:
       self.logger.info("WiFi is not connected.")
       return True
+  def __del__(self):
+    self.disconnect()
+    self.deactivate()
+    self.logger.info("WiFi connection closed.")
   
   def getConfig(self, configName: str):
     return self.wlan.config(configName)
