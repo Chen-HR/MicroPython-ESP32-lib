@@ -6,3 +6,4 @@ from . import Logging
 from . import Timer
 from . import Utils
 from . import Digital
+from . import EventHandler

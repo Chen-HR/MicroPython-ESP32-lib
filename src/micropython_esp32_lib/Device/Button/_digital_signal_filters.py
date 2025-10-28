@@ -2,11 +2,11 @@
 import machine
 
 try:
-  from ..System import Time
-  from ..System import Sleep
-  from ..System import Enum
-  from ..System import Logging
-  from ..System import Digital
+  from ...System import Time
+  from ...System import Sleep
+  from ...System import Enum
+  from ...System import Logging
+  from ...System import Digital
 except ImportError:
   from micropython_esp32_lib.System import Time
   from micropython_esp32_lib.System import Sleep

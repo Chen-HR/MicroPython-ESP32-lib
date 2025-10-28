@@ -16,7 +16,12 @@ classifiers = [
     "Operating System :: Microcontroller",
     "Topic :: Software Development :: Embedded Systems",
 ]
-dependencies = []
+dependencies = [
+    "abc==0.1.0", 
+    "inspect==0.2.0",
+    "dht==0.1.0", 
+    "ssd1306==0.1.0"
+]
 
 [project.optional-dependencies]
 dev = [
