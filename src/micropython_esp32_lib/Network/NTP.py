@@ -8,7 +8,7 @@ except ImportError:
   from micropython_esp32_lib.Utils import Logging
   from micropython_esp32_lib.System import Sleep
 
-def sync(ntp_host: str = "time.google.com", log_level: Logging.Level = Logging.LEVEL.INFO) -> bool:
+def syncTimeWithNTP(ntp_host: str = "time.google.com", log_level: Logging.Level = Logging.LEVEL.INFO) -> bool:
   """  Synchronizes the system time using NTP.
 
   Args:
@@ -30,7 +30,7 @@ def sync(ntp_host: str = "time.google.com", log_level: Logging.Level = Logging.L
     logger.error(f"Synchronization Failed. Error: {e}")
     return False
 
-def try_sync(ntp_hosts: list[str] = ["time.cloudflare.com", "time.google.com", "pool.ntp.org"], log_level: Logging.Level = Logging.LEVEL.INFO) -> bool:
+def syncTimeWithNTPs(ntp_hosts: list[str] = ["time.cloudflare.com", "time.google.com", "pool.ntp.org"], log_level: Logging.Level = Logging.LEVEL.INFO) -> bool:
   """Tries to synchronize the system time using multiple NTP servers.
 
   Args:
@@ -41,7 +41,7 @@ def try_sync(ntp_hosts: list[str] = ["time.cloudflare.com", "time.google.com", "
     bool: True if synchronization was successful with any server, False otherwise.
   """
   for ntp_host in ntp_hosts:
-    if sync(ntp_host=ntp_host, log_level=log_level):
+    if syncTimeWithNTP(ntp_host=ntp_host, log_level=log_level):
       return True
   return False
 
@@ -50,7 +50,7 @@ if __name__ == '__main__':
   logger.info("Test the NTP connection")
 
   logger.info("Sync NTP...")
-  if sync(ntp_host="time.google.com", log_level=Logging.LEVEL.INFO):
+  if syncTimeWithNTPs(log_level=Logging.LEVEL.INFO):
     logger.info("Sync NTP Done.")
   else: 
     logger.warning("Sync NTP Failed.")

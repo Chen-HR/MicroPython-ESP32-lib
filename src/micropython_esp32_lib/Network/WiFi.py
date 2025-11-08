@@ -279,7 +279,7 @@ class Connector:
     final_status = NetworkBasic.STATU.Statu(self.wlan.status())
     if final_status == NetworkBasic.STATU.GOT_IP:
       # ip_config: tuple[str, str, str, str] = self.wlan.ifconfig()
-      self.logger.info(f"WiFi connected successfully. HostName: {self.getHostname()}, IP: {(self.getHostIP())}, MAC: {self.getMAC()}")
+      self.logger.info(f"WiFi connected successfully. HostName: {self.getHostname()}, IP: {(self.getHostIP())}, MAC: {self.getMAC_Str()}")
       return True
     
     elif final_status == NetworkBasic.STATU.IDLE:
@@ -295,7 +295,7 @@ class Connector:
     self.disconnect(timeout_ms=timeout_ms, retry_count=retry_count, retry_interval_ms=retry_interval_ms)
     self.deactivate(timeout_ms=timeout_ms, retry_count=retry_count, retry_interval_ms=retry_interval_ms)
     return False
-  def connecting(self, configs: list[Config], timeout_ms: int = -1, retry_count: int = 8, retry_interval_ms: int | None = None) -> bool:
+  def tryConnect(self, configs: list[Config], timeout_ms: int = -1, retry_count: int = 8, retry_interval_ms: int | None = None) -> bool:
     """Connects to a Wi-Fi network using the provided list of configurations.
     Parameters:
         configs (list[Config]): The list of configurations to use when connecting to the Wi-Fi network.
@@ -363,8 +363,10 @@ class Connector:
     return NetworkBasic.IPV4Address(self.wlan.ifconfig()[2])
   def getDNS(self) -> NetworkBasic.IPV4Address:
     return NetworkBasic.IPV4Address(self.wlan.ifconfig()[3])
-  def getMAC(self) -> str:
+  def getMAC_Bytes(self) -> bytes:
     return self.wlan.config("mac")
+  def getMAC_Str(self) -> str:
+    return "-".join([f"{b:02X}" for b in self.getMAC_Bytes()])
   def getHostname(self) -> str:
     try: 
       return self.wlan.config("dhcp_hostname")

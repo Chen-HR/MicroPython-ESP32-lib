@@ -105,24 +105,31 @@ class IPV4Address:
 
     """
     logger = Logging.Log("IPV4 Address Constructor", log_level)
+    # Parse addr into a tuple and store it in _addr
+    _addr = tuple()
     if addr is None: # if addr is None
-      self.addr: tuple[int, int, int, int] = IPV4Address.NONE
+      _addr = IPV4Address.NONE
       logger.debug("No address provided. Set to default {IPV4Address.NONE}.")
     elif isinstance(addr, str): # if addr is str
       try:
         logger.debug(f"Parse address as string {addr}...")
-        self.addr_: tuple[int, int, int, int] = tuple(map(int, addr.split("."))) # type: ignore
+        _addr = tuple(map(int, addr.split("."))) # type: ignore
       except ValueError:
         logger.error(f"Failed to parse address string: {addr}")
         raise ValueError(f"Invalid IP address string: {addr}")
-    elif isinstance(self.addr, tuple): # if addr is tuple
-      logger.debug(f"Parse address as tuple {self.addr}...")
-      if len(self.addr) != 4: # check length
+    elif isinstance(addr, tuple): # if addr is tuple
+      logger.debug(f"Clone addr to self")
+      _addr = addr
+    # Validate the _addr format
+    if isinstance(_addr, tuple): # if addr is tuple
+      logger.debug(f"Parse address as tuple {_addr}...")
+      if len(_addr) != 4: # check length
         logger.error("IPV4 address must have exactly 4 octets")
         raise ValueError("IPV4 address must have exactly 4 octets")
-      if all(0 <= a <= 255 for a in self.addr): # check range
-        self.addr: tuple[int, int, int, int] = addr
-        logger.debug(f"Address set to {self.addr}")
+      if all(0 <= a <= 255 for a in _addr): # check range
+        logger.debug(f"Address set to {_addr}")
+        self.addr: tuple[int, int, int, int] = _addr
+        return
       else:
         logger.error("Each number must be between 0 and 255")
         raise ValueError("Each number must be between 0 and 255")
