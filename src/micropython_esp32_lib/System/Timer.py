@@ -136,10 +136,8 @@ class MachineTimer:
 
 if __name__ == '__main__':
   try:
-    from . import Sleep
     from . import Time
   except ImportError:
-    from micropython_esp32_lib.System import Sleep
     from micropython_esp32_lib.System import Time
 
   def test_callback_function(timer_obj):
