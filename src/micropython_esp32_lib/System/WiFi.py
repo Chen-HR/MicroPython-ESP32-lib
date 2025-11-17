@@ -1,24 +1,24 @@
-# Network/WiFi.py
+# System/WiFi.py
 import network
 
 try: 
   from ..Utils import Logging
   from ..System import Sleep
-  from . import Basic as NetworkBasic
+  from . import Network
 except ImportError:
   from micropython_esp32_lib.Utils import Logging
   from micropython_esp32_lib.System import Sleep
-  from micropython_esp32_lib.Network import Basic as NetworkBasic
+  from micropython_esp32_lib.System import Network
 
 class Config:
   """Configuration container for WLAN connection and settings."""
   def __init__( self, 
                 ssid: str | None = None, 
                 password: str | None = None, 
-                hostAddress: NetworkBasic.IPV4Address | None = None, 
-                subnet: NetworkBasic.IPV4Address | None = None, 
-                gateway: NetworkBasic.IPV4Address | None = None, 
-                dns: NetworkBasic.IPV4Address | None = None, 
+                hostAddress: Network.IPV4Address | None = None, 
+                subnet: Network.IPV4Address | None = None, 
+                gateway: Network.IPV4Address | None = None, 
+                dns: Network.IPV4Address | None = None, 
                 hostname: str | None = None,
                 mac: bytes | None = None,
                 channel: int | None = None,
@@ -51,10 +51,10 @@ class Config:
     """
     self.ssid: str | None = ssid
     self.password: str | None = password
-    self.hostAddress: NetworkBasic.IPV4Address | None = hostAddress
-    self.subnet: NetworkBasic.IPV4Address | None = subnet
-    self.gateway: NetworkBasic.IPV4Address | None = gateway
-    self.dns: NetworkBasic.IPV4Address | None = dns
+    self.hostAddress: Network.IPV4Address | None = hostAddress
+    self.subnet: Network.IPV4Address | None = subnet
+    self.gateway: Network.IPV4Address | None = gateway
+    self.dns: Network.IPV4Address | None = dns
     self.hostname: str | None = hostname
     self.mac: bytes | None = mac
     self.channel: int | None = channel
@@ -63,7 +63,7 @@ class Config:
     self.hidden: bool | None = hidden
     self.key: str | None = key
     self.txpower: int | float | None = txpower
-    self.pm: NetworkBasic.PowerManagement | None = pm
+    self.pm: Network.PowerManagement | None = pm
     self.logger = Logging.Log(log_name, log_level)
   def __str__(self) -> str:
     return f"WiFi.Config({self.ssid}, {self.password})"
@@ -111,7 +111,7 @@ class Config:
       raise e
     return config
 class Connector:
-  def __init__(self, interface: NetworkBasic.Mode = NetworkBasic.MODE.STA, interval_ms: int = 100, connecting_timeout_ms: int = 10000, idle_timeout_ms: int = 10000, log_name: str = "Wi-Fi Connector", log_level: Logging.Level = Logging.LEVEL.INFO) -> None:
+  def __init__(self, interface: Network.Mode = Network.MODE.STA, interval_ms: int = 100, connecting_timeout_ms: int = 10000, idle_timeout_ms: int = 10000, log_name: str = "Wi-Fi Connector", log_level: Logging.Level = Logging.LEVEL.INFO) -> None:
     """Initializes the Wi-Fi Connector with the given parameters.
     Parameters:
       interface (int): The mode of the Wi-Fi interface (default: MODE.STA).
@@ -169,14 +169,14 @@ class Connector:
     return self.wlan.config("essid")
   def getPassword (self) -> str:
     return self.wlan.config("password")
-  def getHostIP(self) -> NetworkBasic.IPV4Address:
-    return NetworkBasic.IPV4Address(self.wlan.ifconfig()[0])
-  def getNetmask(self) -> NetworkBasic.IPV4Address:
-    return NetworkBasic.IPV4Address(self.wlan.ifconfig()[1])
-  def getGateway(self) -> NetworkBasic.IPV4Address:
-    return NetworkBasic.IPV4Address(self.wlan.ifconfig()[2])
-  def getDNS(self) -> NetworkBasic.IPV4Address:
-    return NetworkBasic.IPV4Address(self.wlan.ifconfig()[3])
+  def getHostIP(self) -> Network.IPV4Address:
+    return Network.IPV4Address(self.wlan.ifconfig()[0])
+  def getNetmask(self) -> Network.IPV4Address:
+    return Network.IPV4Address(self.wlan.ifconfig()[1])
+  def getGateway(self) -> Network.IPV4Address:
+    return Network.IPV4Address(self.wlan.ifconfig()[2])
+  def getDNS(self) -> Network.IPV4Address:
+    return Network.IPV4Address(self.wlan.ifconfig()[3])
   def getMAC_Bytes(self) -> bytes:
     return self.wlan.config("mac")
   def getMAC_Str(self) -> str:
@@ -285,38 +285,38 @@ class SyncConnector(Connector):
       self.logger.warning("Connection aborted: SSID not provided.")
       return False
     # Wait for the connection process to complete
-    if NetworkBasic.STATU.Statu(self.wlan.status()) == NetworkBasic.STATU.CONNECTING:
+    if Network.STATU.Statu(self.wlan.status()) == Network.STATU.CONNECTING:
       for i in range(retry_count):
         self.logger.info("Wifi connecting... ({}/{})".format(i+1, retry_count))
-        if Sleep.sync_wait_until(lambda: NetworkBasic.STATU.Statu(self.wlan.status()) != NetworkBasic.STATU.CONNECTING, timeout_ms=timeout_ms, interval_ms=self.interval_ms):
+        if Sleep.sync_wait_until(lambda: Network.STATU.Statu(self.wlan.status()) != Network.STATU.CONNECTING, timeout_ms=timeout_ms, interval_ms=self.interval_ms):
           self.logger.info("Wifi connected.")
           break
         else:
           self.logger.warning("Wifi connection timeout.")
           return False
-    if NetworkBasic.STATU.Statu(self.wlan.status()) == NetworkBasic.STATU.IDLE:
+    if Network.STATU.Statu(self.wlan.status()) == Network.STATU.IDLE:
       for i in range(retry_count):
         self.logger.info("Wifi idle... ({}/{})".format(i+1, retry_count))
-        if Sleep.sync_wait_until(lambda: NetworkBasic.STATU.Statu(self.wlan.status()) != NetworkBasic.STATU.IDLE, timeout_ms=timeout_ms, interval_ms=self.interval_ms):
+        if Sleep.sync_wait_until(lambda: Network.STATU.Statu(self.wlan.status()) != Network.STATU.IDLE, timeout_ms=timeout_ms, interval_ms=self.interval_ms):
           self.logger.info("Wifi idle.")
           break
         else:
           self.logger.warning("Wifi idle timeout.")
           return False
     # Check the final connection status
-    final_status = NetworkBasic.STATU.Statu(self.wlan.status())
-    if final_status == NetworkBasic.STATU.GOT_IP:
+    final_status = Network.STATU.Statu(self.wlan.status())
+    if final_status == Network.STATU.GOT_IP:
       # ip_config: tuple[str, str, str, str] = self.wlan.ifconfig()
       self.logger.info(f"WiFi connected successfully. HostName: {self.getHostname()}, IP: {(self.getHostIP())}, MAC: {self.getMAC_Str()}")
       return True
     
-    elif final_status == NetworkBasic.STATU.IDLE:
+    elif final_status == Network.STATU.IDLE:
       self.logger.warning("WiFi connection failed: idle status")
-    elif final_status == NetworkBasic.STATU.WRONG_PASSWORD:
+    elif final_status == Network.STATU.WRONG_PASSWORD:
       self.logger.warning("WiFi connection failed: wrong password")
-    elif final_status == NetworkBasic.STATU.NO_AP_FOUND:
+    elif final_status == Network.STATU.NO_AP_FOUND:
       self.logger.warning("WiFi connection failed: no AP found")
-    elif final_status == NetworkBasic.STATU.CONNECT_FAIL:
+    elif final_status == Network.STATU.CONNECT_FAIL:
       self.logger.warning("WiFi connection failed: connect fail")
     else:
       self.logger.warning("WiFi connection failed: unknown status")
@@ -358,7 +358,7 @@ class SyncConnector(Connector):
       # Wait for disconnect
       for i in range(retry_count):
         self.logger.info("Wifi disconnecting... ({}/{})".format(i+1, retry_count))
-        if Sleep.sync_wait_until(lambda: not self.wlan.isconnected() and NetworkBasic.Statu("", self.wlan.status()) == NetworkBasic.STATU.IDLE, timeout_ms=timeout_ms, interval_ms=self.interval_ms):
+        if Sleep.sync_wait_until(lambda: not self.wlan.isconnected() and Network.Statu("", self.wlan.status()) == Network.STATU.IDLE, timeout_ms=timeout_ms, interval_ms=self.interval_ms):
           self.logger.info("Wifi disconnected.")
           return True
         else:
@@ -473,38 +473,38 @@ class AsyncConnector(Connector):
       self.logger.warning("Connection aborted: SSID not provided.")
       return False
     # Wait for the connection process to complete
-    if NetworkBasic.STATU.Statu(self.wlan.status()) == NetworkBasic.STATU.CONNECTING:
+    if Network.STATU.Statu(self.wlan.status()) == Network.STATU.CONNECTING:
       for i in range(retry_count):
         self.logger.info("Wifi connecting... ({}/{})".format(i+1, retry_count))
-        if await Sleep.async_wait_until(lambda: NetworkBasic.STATU.Statu(self.wlan.status()) != NetworkBasic.STATU.CONNECTING, timeout_ms=timeout_ms, interval_ms=self.interval_ms):
+        if await Sleep.async_wait_until(lambda: Network.STATU.Statu(self.wlan.status()) != Network.STATU.CONNECTING, timeout_ms=timeout_ms, interval_ms=self.interval_ms):
           self.logger.info("Wifi connected.")
           break
         else:
           self.logger.warning("Wifi connection timeout.")
           return False
-    if NetworkBasic.STATU.Statu(self.wlan.status()) == NetworkBasic.STATU.IDLE:
+    if Network.STATU.Statu(self.wlan.status()) == Network.STATU.IDLE:
       for i in range(retry_count):
         self.logger.info("Wifi idle... ({}/{})".format(i+1, retry_count))
-        if await Sleep.async_wait_until(lambda: NetworkBasic.STATU.Statu(self.wlan.status()) != NetworkBasic.STATU.IDLE, timeout_ms=timeout_ms, interval_ms=self.interval_ms):
+        if await Sleep.async_wait_until(lambda: Network.STATU.Statu(self.wlan.status()) != Network.STATU.IDLE, timeout_ms=timeout_ms, interval_ms=self.interval_ms):
           self.logger.info("Wifi idle.")
           break
         else:
           self.logger.warning("Wifi idle timeout.")
           return False
     # Check the final connection status
-    final_status = NetworkBasic.STATU.Statu(self.wlan.status())
-    if final_status == NetworkBasic.STATU.GOT_IP:
+    final_status = Network.STATU.Statu(self.wlan.status())
+    if final_status == Network.STATU.GOT_IP:
       # ip_config: tuple[str, str, str, str] = self.wlan.ifconfig()
       self.logger.info(f"WiFi connected successfully. HostName: {self.getHostname()}, IP: {(self.getHostIP())}, MAC: {self.getMAC_Str()}")
       return True
     
-    elif final_status == NetworkBasic.STATU.IDLE:
+    elif final_status == Network.STATU.IDLE:
       self.logger.warning("WiFi connection failed: idle status")
-    elif final_status == NetworkBasic.STATU.WRONG_PASSWORD:
+    elif final_status == Network.STATU.WRONG_PASSWORD:
       self.logger.warning("WiFi connection failed: wrong password")
-    elif final_status == NetworkBasic.STATU.NO_AP_FOUND:
+    elif final_status == Network.STATU.NO_AP_FOUND:
       self.logger.warning("WiFi connection failed: no AP found")
-    elif final_status == NetworkBasic.STATU.CONNECT_FAIL:
+    elif final_status == Network.STATU.CONNECT_FAIL:
       self.logger.warning("WiFi connection failed: connect fail")
     else:
       self.logger.warning("WiFi connection failed: unknown status")
@@ -546,7 +546,7 @@ class AsyncConnector(Connector):
       # Wait for disconnect
       for i in range(retry_count):
         self.logger.info("Wifi disconnecting... ({}/{})".format(i+1, retry_count))
-        if await Sleep.async_wait_until(lambda: not self.wlan.isconnected() and NetworkBasic.Statu("", self.wlan.status()) == NetworkBasic.STATU.IDLE, timeout_ms=timeout_ms, interval_ms=self.interval_ms):
+        if await Sleep.async_wait_until(lambda: not self.wlan.isconnected() and Network.Statu("", self.wlan.status()) == Network.STATU.IDLE, timeout_ms=timeout_ms, interval_ms=self.interval_ms):
           self.logger.info("Wifi disconnected.")
           return True
         else:

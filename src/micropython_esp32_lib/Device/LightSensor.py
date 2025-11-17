@@ -23,7 +23,7 @@ class LightSensor: # TODO: samplingTimes: int = 10, interval_ms: int = 10
     return self.adc.read_u16()
 
   def light_u16(self) -> int:
-    return int(Utils.map(self.adc.read_u16(), self.signal_lowLight, self.signal_highLight, 0, Utils.UINT16_MAX))
+    return int(Utils.mapping(self.adc.read_u16(), self.signal_lowLight, self.signal_highLight, 0, Utils.UINT16_MAX))
 
 
 class PhotoResistor(LightSensor):

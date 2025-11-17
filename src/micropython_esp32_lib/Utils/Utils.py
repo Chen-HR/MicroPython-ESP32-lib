@@ -5,9 +5,9 @@
 UINT16_MAX = 65535
 UINT08_MAX = 255
 
-def map(x: float | int, in_min: float | int, in_max: float | int, out_min: float | int, out_max: float | int) -> float | int:
+def mapping(x: float | int, in_min: float | int, in_max: float | int, out_min: float | int, out_max: float | int) -> float | int:
   """
-  Re-maps a number from one range to another.
+  Re-mappings a number from one range to another.
 
   This is similar to Arduino's map function. It interpolates a value `x`
   from an input range (`in_min` to `in_max`) to an output range

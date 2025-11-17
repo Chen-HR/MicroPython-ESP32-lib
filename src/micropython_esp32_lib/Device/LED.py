@@ -15,8 +15,8 @@ except ImportError:
 class LED:
   def __init__(self, pin: machine.Pin, statuOn_dutyRatio: float = 1.0, statuOff_dutyRatio: float = 0.0, frequency_Hz: int = 256) -> None:
     self.pin_pwm: machine.PWM = machine.PWM(pin, freq=frequency_Hz)
-    self.statuOn_dutyu16: int = int(Utils.map(statuOn_dutyRatio, 0.0, 1.0, 0.0, Utils.UINT16_MAX))
-    self.statuOff_dutyu16: int = int(Utils.map(statuOff_dutyRatio, 0.0, 1.0, 0.0, Utils.UINT16_MAX))
+    self.statuOn_dutyu16: int = int(Utils.mapping(statuOn_dutyRatio, 0.0, 1.0, 0.0, Utils.UINT16_MAX))
+    self.statuOff_dutyu16: int = int(Utils.mapping(statuOff_dutyRatio, 0.0, 1.0, 0.0, Utils.UINT16_MAX))
     # No logger added here, as it's a very low-level component, and logging might be too verbose.
     # Higher-level components can log their usage of LED.
   def on(self) -> None:
@@ -25,7 +25,7 @@ class LED:
     self.pin_pwm.duty_u16(self.statuOff_dutyu16)
   def set(self, value: float) -> None:
     # Map 'value' from 0-1 to the range defined by statuOff_dutyu16 to statuOn_dutyu16
-    self.pin_pwm.duty_u16(int(Utils.map(value, 0, 1, self.statuOff_dutyu16, self.statuOn_dutyu16)))
+    self.pin_pwm.duty_u16(int(Utils.mapping(value, 0, 1, self.statuOff_dutyu16, self.statuOn_dutyu16)))
   def toggle(self) -> None:
     current_duty = self.pin_pwm.duty_u16()
     if current_duty == self.statuOn_dutyu16:
@@ -120,7 +120,7 @@ if __name__ == "__main__":
   }
   # Assuming Common Anode for LED where duty 0 is brightest, 65535 is off
   # Adjust statuOn_dutyRatio/statuOff_dutyRatio based on whether it's common anode or cathode.
-  # For common cathode, 1.0 (65535) is brightest, 0.0 (0) is off. The current Utils.map is for common cathode.
+  # For common cathode, 1.0 (65535) is brightest, 0.0 (0) is off. The current Utils.mapping is for common cathode.
   # If common anode, invert the duty ratios for LED.
   # For this example, let's assume common cathode for simplicity, as the map function expects 0-1 brightness mapping to 0-65535 duty.
   rgbled: RGBLED = RGBLED(
@@ -144,10 +144,10 @@ if __name__ == "__main__":
       logger_main.info(f"Fading to Utils.RGBA: ({r_target:03d}, {g_target:03d}, {b_target:03d}, {alpha_target:03d}) over {rounds} steps.")
       
       for i in range(rounds):
-        r_tmp = Utils.map(i, 0, rounds, r_init, r_target)
-        g_tmp = Utils.map(i, 0, rounds, g_init, g_target)
-        b_tmp = Utils.map(i, 0, rounds, b_init, b_target)
-        a_tmp = Utils.map(i, 0, rounds, alpha, alpha_target)
+        r_tmp = Utils.mapping(i, 0, rounds, r_init, r_target)
+        g_tmp = Utils.mapping(i, 0, rounds, g_init, g_target)
+        b_tmp = Utils.mapping(i, 0, rounds, b_init, b_target)
+        a_tmp = Utils.mapping(i, 0, rounds, alpha, alpha_target)
         rgbled.set_color(int(r_tmp), int(g_tmp), int(b_tmp), int(a_tmp))
         Sleep.sync_ms(1)
       
@@ -188,9 +188,9 @@ if __name__ == "__main__":
       for i in range(rounds):
         tmp_pixels_list.clear() # Clear for new frame
         for j in range(size):
-          r_tmp = Utils.map(i, 0, rounds, old_pixels[j].r, new_pixels[j].r)
-          g_tmp = Utils.map(i, 0, rounds, old_pixels[j].g, new_pixels[j].g)
-          b_tmp = Utils.map(i, 0, rounds, old_pixels[j].b, new_pixels[j].b)
+          r_tmp = Utils.mapping(i, 0, rounds, old_pixels[j].r, new_pixels[j].r)
+          g_tmp = Utils.mapping(i, 0, rounds, old_pixels[j].g, new_pixels[j].g)
+          b_tmp = Utils.mapping(i, 0, rounds, old_pixels[j].b, new_pixels[j].b)
           tmp_pixels_list.append(Utils.RGB(int(r_tmp), int(g_tmp), int(b_tmp)))
         rgbLedPixels.set(tmp_pixels_list)
         Sleep.sync_ms(1)

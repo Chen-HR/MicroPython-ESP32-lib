@@ -1,4 +1,4 @@
-# Network/NTP.py
+# System/NTP.py
 import ntptime
 
 try: 
