@@ -77,7 +77,8 @@ class DRIVE:
 #   Pin.IRQ_HIGH_LEVEL
 class IRQ(Enum.Unit): # Inherit from Enum.Unit
   """IRQ Trigger Wrapper Class, extending System.Code."""
-  pass
+  def __or__(self, other: Enum.Unit):
+    return self.value | other.value
 class IRQCode:
   IRQ_FALLING: IRQ = IRQ("IRQ_FALLING", machine.Pin.IRQ_FALLING)
   IRQ_RISING: IRQ = IRQ("IRQ_RISING", machine.Pin.IRQ_RISING)
@@ -112,3 +113,15 @@ class SIGNAL:
   """Standard digital signal constants (HIGH, LOW)."""
   HIGH: Signal = Signal("HIGH", 1)
   LOW : Signal = Signal("LOW", 0)
+  @classmethod
+  def inverse(cls, signal: Signal) -> Signal:
+    if signal == SIGNAL.HIGH: return SIGNAL.LOW
+    elif signal == SIGNAL.LOW: return SIGNAL.HIGH
+    raise ValueError(f"Signal value must be 0 or 1, not {signal}")
+  @classmethod
+  def query(cls, value: int) -> Signal:
+    if   value == 1: return SIGNAL.HIGH
+    elif value == 0: return SIGNAL.LOW
+    raise ValueError(f"Signal value must be 0 or 1, not {value}")
+    
+    

@@ -1,18 +1,18 @@
-# Device/Button.py
+"""
+# file: ./Utils/DigitalFilters.py
+"""
 import machine
 
 try:
-  from ...System import Time
-  from ...System import Sleep
-  from ...System import Enum
-  from ...System import Logging
-  from ...System import Digital
+  from ..System import Sleep
+  from ..System import Digital
+  from ..Utils import Enum
+  from ..Utils import Logging
 except ImportError:
-  from micropython_esp32_lib.System import Time
   from micropython_esp32_lib.System import Sleep
-  from micropython_esp32_lib.System import Enum
-  from micropython_esp32_lib.System import Logging
   from micropython_esp32_lib.System import Digital
+  from micropython_esp32_lib.Utils import Enum
+  from micropython_esp32_lib.Utils import Logging
 
 def isChanged_sync(pin: machine.Pin, start_signal: Digital.Signal, end_signal: Digital.Signal, threshold: int = 10, interval_ms: int = 1) -> bool:
   """Synchronously detects if the pin's value briefly changes from `start_signal` to `end_signal`.  
