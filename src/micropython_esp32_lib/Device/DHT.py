@@ -1,20 +1,23 @@
-# src/micropython_esp32_lib/Device/DHT.py
+"""
+# ./Device/DHT.py
+TODO: Stateful, do not continuously monitor
+"""
 import _thread as thread
 import asyncio
-from machine import Pin
-import dht
+from machine import Pin # type: ignore
+import dht # type: ignore
 
 try:
   from ..System import Time
-  from ..System import Sleep
+  from ..System.Time import Sleep
   from ..Utils import Logging
 except ImportError:
   from micropython_esp32_lib.System import Time
-  from micropython_esp32_lib.System import Sleep
+  from micropython_esp32_lib.System.Time import Sleep
   from micropython_esp32_lib.Utils import Logging
 
 class DHT:
-  def __init__(self, pin: Pin, type: str = "DHT11", log_name: str = "DHT", log_level: Logging.Level = Logging.LEVEL.INFO) -> None:
+  def __init__(self, pin: Pin, type: str = "DHT11", log_name: str = "DHT") -> None:
     """DHT Sensor
 
     Args:
@@ -24,7 +27,7 @@ class DHT:
         log_level (Logging.Level, optional): The log level. Defaults to Logging.LEVEL.INFO.
     """
     self.pin: Pin = pin
-    self.logger = Logging.Log(log_name, log_level)
+    # self.logger = Logging.Log(log_name, log_level)
 
     if type == "DHT11":
       self.sensor = dht.DHT11(self.pin)
@@ -33,7 +36,7 @@ class DHT:
       self.sensor = dht.DHT22(self.pin)
       self.samplingPeriod_ms: int = 2000  # DHT22 minimum sampling period is 2 seconds
     else:
-      self.logger.error(f"Unsupported sensor type \"{type}\". Use \"DHT11\" or \"DHT22\".")
+      # self.logger.error(f"Unsupported sensor type \"{type}\". Use \"DHT11\" or \"DHT22\".")
       raise ValueError(f"Unsupported sensor type \"{type}\". Use \"DHT11\" or \"DHT22\".")
     
     self.temperature_C: float | int = 0
@@ -57,7 +60,7 @@ class DHT:
       self.humidity_ratio: float | int = self.sensor.humidity()
       return self.temperature_C, self.humidity_ratio
     except Exception as e:
-      self.logger.error(f"[_measure_sync_] Failed to measure: {e}")
+      # self.logger.error(f"[_measure_sync_] Failed to measure: {e}")
       return None
   async def _measure_async_(self) -> tuple[float | int, float | int] | None:
     try:
@@ -69,7 +72,7 @@ class DHT:
       self.humidity_ratio: float | int = self.sensor.humidity()
       return self.temperature_C, self.humidity_ratio
     except Exception as e:
-      self.logger.error(f"[_measure_async_] Failed to measure: {e}")
+      # self.logger.error(f"[_measure_async_] Failed to measure: {e}")
       return None
 
   def _monitor_sync_(self) -> None: # TODO: consider moving this monitoring pattern to System/EventHandler
@@ -78,34 +81,36 @@ class DHT:
       while self.measure_thread_enabled:
         self._measure_sync_()
     except Exception as e:
-      self.logger.error(f"[_monitor_sync_] Failed to monitor: {e}")
+      raise e
+      # self.logger.error(f"[_monitor_sync_] Failed to monitor: {e}")
   async def _monitor_async_(self) -> None: # TODO: consider moving this monitoring pattern to System/EventHandler
     """Measure temperature and humidity"""
     try:
       while self.measure_thread_enabled:
         await self._measure_async_()
     except Exception as e:
-      self.logger.error(f"[_monitor_async_] Failed to monitor: {e}")
+      raise e
+      # self.logger.error(f"[_monitor_async_] Failed to monitor: {e}")
 
   def startMonitor_sync(self) -> None: # TODO: consider moving this monitoring pattern to System/EventHandler
     """Start measuring in thread"""
     if not self.measure_thread_enabled:
       self.measure_thread_enabled = True
       self.measure_thread_id = thread.start_new_thread(self._monitor_sync_, ())
-      self.logger.info("Started synchronous DHT monitoring thread.")
+      # self.logger.info("Started synchronous DHT monitoring thread.")
   def startMonitor_async(self) -> None: # TODO: consider moving this monitoring pattern to System/EventHandler
     """Start measuring in task"""
     if not self.measure_task_enabled:
       self.measure_task_enabled = True
       self.measure_task = asyncio.create_task(self._monitor_async_())
-      self.logger.info("Started asynchronous DHT monitoring task.")
+      # self.logger.info("Started asynchronous DHT monitoring task.")
 
   def stopMonitor_sync(self) -> None: # TODO: consider moving this monitoring pattern to System/EventHandler
     """Stop measuring"""
     if self.measure_thread_enabled:
       self.measure_thread_enabled = False
       self.measure_thread_id = None
-      self.logger.info("Stopped synchronous DHT monitoring thread.")
+      # self.logger.info("Stopped synchronous DHT monitoring thread.")
   def stopMonitor_async(self) -> None: # TODO: consider moving this monitoring pattern to System/EventHandler
     """Stop measuring"""
     if self.measure_task_enabled:
@@ -113,7 +118,7 @@ class DHT:
       if self.measure_task:
           self.measure_task.cancel() # Safely cancel the task
       self.measure_task = None
-      self.logger.info("Stopped asynchronous DHT monitoring task.")
+      # self.logger.info("Stopped asynchronous DHT monitoring task.")
 
   def Temperature_C_sync(self) -> float | None: # TODO: consider exposing through an EventHandler pattern
     """Get temperature in Celsius"""
@@ -158,42 +163,42 @@ class DHT:
     return self.humidity_ratio
 
 if __name__ == "__main__":
-  logger_main = Logging.Log("DHT_Test", Logging.LEVEL.INFO)
+  # Logging = Logging.Log("DHT_Test", Logging.LEVEL.INFO)
 
   def main_sync_test(dht_sensor: DHT) -> None:
-    logger_main.info("Testing DHT class with thread mode, Press Ctrl+C to stop the program.")
+    Logging.info("Testing DHT class with thread mode, Press Ctrl+C to stop the program.")
     dht_sensor.startMonitor_sync()
     try:
       while True:
         Sleep.sync_ms(dht_sensor.samplingPeriod_ms)
-        logger_main.info(f'Temperature: {dht_sensor.Temperature_K_sync():3.1f} K')
-        logger_main.info(f'Temperature: {dht_sensor.Temperature_C_sync():3.1f} C')
-        logger_main.info(f'Temperature: {dht_sensor.Temperature_F_sync():3.1f} F')
-        logger_main.info(f'Humidity: {dht_sensor.Humidity_ratio_sync():3.1f} %')
-        logger_main.info('\n\n')
+        Logging.info(f'Temperature: {dht_sensor.Temperature_K_sync():3.1f} K')
+        Logging.info(f'Temperature: {dht_sensor.Temperature_C_sync():3.1f} C')
+        Logging.info(f'Temperature: {dht_sensor.Temperature_F_sync():3.1f} F')
+        Logging.info(f'Humidity: {dht_sensor.Humidity_ratio_sync():3.1f} %')
+        Logging.info('\n\n')
     except KeyboardInterrupt:
-      logger_main.info("Program interrupted")
+      Logging.info("Program interrupted")
     finally:
       dht_sensor.stopMonitor_sync()
-      logger_main.info("Program ended")
+      Logging.info("Program ended")
 
   async def main_async_test(dht_sensor: DHT) -> None:
-    logger_main.info("Testing DHT class with task mode, Press Ctrl+C to stop the program.")
+    Logging.info("Testing DHT class with task mode, Press Ctrl+C to stop the program.")
     dht_sensor.startMonitor_async()
     try:
       while True:
         await Sleep.async_ms(dht_sensor.samplingPeriod_ms)
-        logger_main.info(f'Temperature: {(await dht_sensor.Temperature_K_async()):3.1f} K')
-        logger_main.info(f'Temperature: {(await dht_sensor.Temperature_C_async()):3.1f} C')
-        logger_main.info(f'Temperature: {(await dht_sensor.Temperature_F_async()):3.1f} F')
-        logger_main.info(f'Humidity: {(await dht_sensor.Humidity_ratio_async()):3.1f} %')
-        logger_main.info('\n\n')
+        Logging.info(f'Temperature: {(await dht_sensor.Temperature_K_async()):3.1f} K')
+        Logging.info(f'Temperature: {(await dht_sensor.Temperature_C_async()):3.1f} C')
+        Logging.info(f'Temperature: {(await dht_sensor.Temperature_F_async()):3.1f} F')
+        Logging.info(f'Humidity: {(await dht_sensor.Humidity_ratio_async()):3.1f} %')
+        Logging.info('\n\n')
     except KeyboardInterrupt:
-      logger_main.info("Program interrupted")
+      Logging.info("Program interrupted")
     finally:
       dht_sensor.stopMonitor_async()
-      logger_main.info("Program ended")
+      Logging.info("Program ended")
 
-  dht_sensor_instance = DHT(Pin(4), "DHT11", log_level=Logging.LEVEL.DEBUG)
+  dht_sensor_instance = DHT(Pin(4), "DHT11")
   main_sync_test(dht_sensor_instance)
   asyncio.run(main_async_test(dht_sensor_instance))

@@ -3,19 +3,19 @@
 - ref: [VictronVEDirectArduino](https://github.com/winginitau/VictronVEDirectArduino), [VeDirectFrameHandler](https://github.com/giacinti/VeDirectFrameHandler), [Victron.Arduino-ESP8266](https://github.com/physee/Victron.Arduino-ESP8266)
 """
 
-import machine
+import machine # type: ignore
 import asyncio
 
 try:
   # Relative imports for the provided project structure
   from ..System import Time
-  from ..System import Sleep
+  from ..System.Time import Sleep
   from ..Utils import Logging
   from ..Utils import Utils
 except ImportError:
   # Fallback imports for external use
   from micropython_esp32_lib.System import Time
-  from micropython_esp32_lib.System import Sleep
+  from micropython_esp32_lib.System.Time import Sleep
   from micropython_esp32_lib.Utils import Logging
   from micropython_esp32_lib.Utils import Utils
 
@@ -41,8 +41,7 @@ class VEDirectConnector:
   to ensure correct frame parsing and checksum validation in a non-blocking way.
   """
   def __init__(self, uart_id: int, baudrate: int = BAUDRATE, 
-               tx_pin: int | None = None, rx_pin: int | None = None,
-               log_name: str = "VEDirectConnector", log_level: Logging.Level = Logging.LEVEL.INFO):
+               tx_pin: int | None = None, rx_pin: int | None = None,):
     """
     Initializes the VE.Direct Connector.
 
@@ -55,7 +54,7 @@ class VEDirectConnector:
     Raises:
       Exception: If UART initialization fails.
     """
-    self.logger: Logging.Log = Logging.Log(log_name, log_level)
+    # self.logger: Logging.Log = Logging.Log(log_name, log_level)
     self.active: bool = False
     self._read_task: asyncio.Task | None = None
     
@@ -80,9 +79,9 @@ class VEDirectConnector:
         
       # Set a low timeout for non-blocking read polling (machine.UART.any() is preferred, but timeout ensures low latency read)
       self.uart.init(baudrate=baudrate, timeout=10) 
-      self.logger.info(f"UART{uart_id} initialized at {baudrate} baud.")
+      # self.logger.info(f"UART{uart_id} initialized at {baudrate} baud.")
     except Exception as e:
-      self.logger.error(f"Failed to initialize UART{uart_id}: {e}")
+      # self.logger.error(f"Failed to initialize UART{uart_id}: {e}")
       raise e
 
   def _text_rx_event(self) -> None:
@@ -96,11 +95,11 @@ class VEDirectConnector:
   def _frame_end_event(self, valid: bool) -> None:
     """Called when the Checksum line is received and the frame is complete."""
     if valid:
-        self.logger.debug(f"Frame Validated. Updating public data. ({len(self._temp_frame_data)} fields)")
+        # self.logger.debug(f"Frame Validated. Updating public data. ({len(self._temp_frame_data)} fields)")
         # Use .update() for a quick, near-atomic transfer of the frame data
         self.data.update(self._temp_frame_data)
     else:
-        self.logger.warning(f"Invalid frame checksum: {self._checksum}. Discarding frame data.")
+        # self.logger.warning(f"Invalid frame checksum: {self._checksum}. Discarding frame data.")
     
     # Reset for the next frame
     self._temp_frame_data.clear()
@@ -112,7 +111,7 @@ class VEDirectConnector:
     try:
       byte_char = chr(inbyte)
     except ValueError:
-      self.logger.warning(f"Received non-ASCII byte: {inbyte}. Skipping checksum.")
+      # self.logger.warning(f"Received non-ASCII byte: {inbyte}. Skipping checksum.")
       return
 
     # Check for start of hex frame (':')
@@ -130,7 +129,7 @@ class VEDirectConnector:
     if self._state == States.RECORD_HEX:
         # Simplified: Just wait for the end marker. The C++ code's hex parsing is complex.
         if byte_char == '\n':
-            self.logger.warning("Hex frame detected and ignored.")
+            # self.logger.warning("Hex frame detected and ignored.")
             self._state = self._pushed_state # Restore previous state
         return
         
@@ -156,7 +155,7 @@ class VEDirectConnector:
                 self._state = States.RECORD_VALUE
         elif byte_char in ('\r', '\n'):
             # Protocol Error: CR/LF in the middle of a name. Resync.
-            self.logger.warning(f"Protocol Error: Unexpected EOL in name: {self._current_name}")
+            # self.logger.warning(f"Protocol Error: Unexpected EOL in name: {self._current_name}")
             self._state = States.IDLE 
             self._current_name = ""
         else:
@@ -188,7 +187,7 @@ class VEDirectConnector:
 
   async def _read(self) -> None:
     """The main asynchronous loop to read from the UART."""
-    self.logger.info("Starting VE.Direct background read task...")
+    # self.logger.info("Starting VE.Direct background read task...")
     
     while self.active:
       try:
@@ -207,10 +206,10 @@ class VEDirectConnector:
         await Sleep.async_ms(5) 
 
       except Exception as e:
-        self.logger.error(f"Error in _read_task: {e}. Recovering in 1s.")
+        # self.logger.error(f"Error in _read_task: {e}. Recovering in 1s.")
         await Sleep.async_s(1) # Wait before retrying on error
 
-    self.logger.info("VE.Direct background read task stopped.")
+    # self.logger.info("VE.Direct background read task stopped.")
 
   async def activate(self) -> None:
     """Starts the asynchronous reading task."""
@@ -221,11 +220,11 @@ class VEDirectConnector:
         self.uart.deinit() 
         self.uart.init(baudrate=self.uart_baudrate, timeout=10) 
       except Exception as e:
-        self.logger.error(f"Failed to re-initialize UART: {e}")
+        # self.logger.error(f"Failed to re-initialize UART: {e}")
         return
 
       self._read_task = asyncio.create_task(self._read())
-      self.logger.info("VEDirectConnector activated.")
+      # self.logger.info("VEDirectConnector activated.")
 
   def deactivate(self) -> None:
     """Stops the asynchronous reading task."""
@@ -234,7 +233,7 @@ class VEDirectConnector:
       if self._read_task is not None:
         self._read_task.cancel()
         self._read_task = None
-      self.logger.info("VEDirectConnector deactivated.")
+      # self.logger.info("VEDirectConnector deactivated.")
       
   def get(self, key: str, default=None) -> str | None:
     """Retrieves a value from the last valid frame data."""
@@ -264,12 +263,11 @@ if __name__ == '__main__':
     # To run this, uncomment the asyncio.run call and ensure the UART pins are available.
 
     async def main_vedirect_test():
-      logger_main = Logging.Log("VEDirectTest", Logging.LEVEL.INFO)
-      logger_main.info("Starting VEDirectConnector Test. Connect VE.Direct TX to pin 17.")
+      Logging.info("Starting VEDirectConnector Test. Connect VE.Direct TX to pin 17.")
       
       try:
         # TX pin is set to None as we only need to receive data
-        connector = VEDirectConnector(UART_ID, tx_pin=None, rx_pin=RX_PIN_NUM, log_level=Logging.LEVEL.DEBUG)
+        connector = VEDirectConnector(UART_ID, tx_pin=None, rx_pin=RX_PIN_NUM)
         await connector.activate()
         
         start_time = Time.current_s()
@@ -277,20 +275,20 @@ if __name__ == '__main__':
           await Sleep.async_s(1)
           data = connector.getAll()
           if data:
-            logger_main.info("--- VE.Direct Data Update ---")
+            Logging.info("--- VE.Direct Data Update ---")
             # Example specific field access
             soc = connector.get('SOC', 'N/A')
             voltage = connector.get('V', 'N/A')
-            logger_main.info(f"SOC: {soc}, Voltage: {voltage}")
-            logger_main.debug(f"Full Frame: {data}")
+            Logging.info(f"SOC: {soc}, Voltage: {voltage}")
+            Logging.debug(f"Full Frame: {data}")
           else:
-            logger_main.info("Waiting for first valid frame...")
+            Logging.info("Waiting for first valid frame...")
             
       except Exception as e:
-        logger_main.error(f"Test run failed: {e}")
+        Logging.error(f"Test run failed: {e}")
       finally:
         if 'connector' in locals(): connector.deactivate() # type: ignore
-        logger_main.info("VEDirectConnector Test Ended.")
+        Logging.info("VEDirectConnector Test Ended.")
 
     asyncio.run(main_vedirect_test())
     pass

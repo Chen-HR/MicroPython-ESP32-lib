@@ -2,7 +2,7 @@
 
 [project]
 name = "micropython_esp32_lib"
-version = "0.1.1"
+version = "0.2.0"
 authors = [
     {name = "HRChen", email = "tn918419@gmail.com"},
 ]
@@ -17,15 +17,17 @@ classifiers = [
     "Topic :: Software Development :: Embedded Systems",
 ]
 dependencies = [
-    # "abc==0.1.0", 
+    # "abc==0.1.0",
     # "inspect==0.2.0",
-    # "dht==0.1.0", 
+    # "typing>=3.7.4.3",
+    # "logging>=0.4.9.6",
+    # "dht==0.1.0",
     # "ssd1306==0.1.0"
 ]
 
 [project.optional-dependencies]
 dev = [
-    # "micropython-esp32-stubs",
+    "micropython-esp32-stubs",
     # "typing-extensions",
     # "pytest", 
 ]

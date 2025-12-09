@@ -7,11 +7,9 @@ import _thread as thread
 import asyncio
 
 try: 
-  from . import Logging
-  from ..System import Sleep
+  from ..System.Time import Sleep
 except ImportError:
-  from micropython_esp32_lib.Utils import Logging
-  from micropython_esp32_lib.System import Sleep
+  from micropython_esp32_lib.System.Time import Sleep
 
 class BaseHandler(abc.ABC):
   def __init__(self, *args, **kwargs):
@@ -56,21 +54,18 @@ class AsyncListener(BaseListener):
 
 class ListenerHandler(abc.ABC):
   """Listener Handler Class"""
-  def __init__(self, period_ms: int = 100, log_name: str = "ListenerHandler", log_level: Logging.Level = Logging.LEVEL.INFO, *args, **kwargs):
+  def __init__(self, period_ms: int = 100, *args, **kwargs):
     """
     Constructs a new ListenerHandler object.
 
     Args:
       period_ms (int, optional): The period in milliseconds to check for events. Defaults to 100 ms.
-      log_name (str, optional): The log name for this ListenerHandler instance. Defaults to "ListenerHandler".
-      log_level (Logging.Level, optional): The log level for this ListenerHandler instance. Defaults to Logging.LEVEL.INFO.
       *args: Additional arguments to pass to the Handler object.
       **kwargs: Additional keyword arguments to pass to the Handler object.
     """
     # self.listener: Listener = listener
     # self.handler: Handler = handler
     self.period_ms: int = period_ms
-    self.logger = Logging.Log(log_name, log_level)
     self.args = args
     self.kwargs = kwargs
     self.active = False
@@ -86,7 +81,7 @@ class ListenerHandler(abc.ABC):
   def __del__(self) -> None:
     self.deactivate()
 class SyncListenerHandler(ListenerHandler):
-  def __init__(self, listener: SyncListener, period_ms: int = 100, log_name: str = "SyncListenerHandler", log_level: Logging.Level = Logging.LEVEL.INFO, *args, **kwargs):
+  def __init__(self, listener: SyncListener, period_ms: int = 100, *args, **kwargs):
     """
     Constructs a new ListenerHandler object.
 
@@ -94,15 +89,13 @@ class SyncListenerHandler(ListenerHandler):
       listener (SyncListener): The Listener object to listen.
       handler (BaseHandler): The Handler object to execute upon event occurrence.
       period_ms (int, optional): The period in milliseconds to check for events. Defaults to 100 ms.
-      log_name (str, optional): The log name for this ListenerHandler instance. Defaults to "SyncListenerHandler".
-      log_level (Logging.Level, optional): The log level for this ListenerHandler instance. Defaults to Logging.LEVEL.INFO.
       *args: Additional arguments to pass to the Handler object.
       **kwargs: Additional keyword arguments to pass to the Handler object.
     """
-    super().__init__(period_ms, log_name, log_level, *args, **kwargs)
+    super().__init__(period_ms, *args, **kwargs)
     self.listener: SyncListener = listener
 class AsyncListenerHandler(ListenerHandler):
-  def __init__(self, listener: AsyncListener, period_ms: int = 100, log_name: str = "AsyncListenerHandler", log_level: Logging.Level = Logging.LEVEL.INFO, *args, **kwargs):
+  def __init__(self, listener: AsyncListener, period_ms: int = 100, *args, **kwargs):
     """
     Constructs a new ListenerHandler object.
 
@@ -110,16 +103,14 @@ class AsyncListenerHandler(ListenerHandler):
       listener (AsyncListener): The Listener object to listen.
       handler (BaseHandler): The Handler object to execute upon event occurrence.
       period_ms (int, optional): The period in milliseconds to check for events. Defaults to 100 ms.
-      log_name (str, optional): The log name for this ListenerHandler instance. Defaults to "AsyncListenerHandler".
-      log_level (Logging.Level, optional): The log level for this ListenerHandler instance. Defaults to Logging.LEVEL.INFO.
       *args: Additional arguments to pass to the Handler object.
       **kwargs: Additional keyword arguments to pass to the Handler object.
     """
-    super().__init__(period_ms, log_name, log_level, *args, **kwargs)
+    super().__init__(period_ms, *args, **kwargs)
     self.listener: AsyncListener = listener
 class SyncListenerSyncHandler(SyncListenerHandler):
   """Listener Handler Class"""
-  def __init__(self, listener: SyncListener, handler: SyncHandler, period_ms: int = 100, log_name: str = "SyncListenerSyncHandler", log_level: Logging.Level = Logging.LEVEL.INFO, *args, **kwargs):
+  def __init__(self, listener: SyncListener, handler: SyncHandler, period_ms: int = 100, *args, **kwargs):
     """
     Constructs a new ListenerHandler object.
 
@@ -127,12 +118,10 @@ class SyncListenerSyncHandler(SyncListenerHandler):
       listener (SyncListener): The Listener object to listen.
       handler (SyncHandler): The Handler object to execute upon event occurrence.
       period_ms (int, optional): The period in milliseconds to check for events. Defaults to 100 ms.
-      log_name (str, optional): The log name for this ListenerHandler instance. Defaults to "SyncListenerSyncHandler".
-      log_level (Logging.Level, optional): The log level for this ListenerHandler instance. Defaults to Logging.LEVEL.INFO.
       *args: Additional arguments to pass to the Handler object.
       **kwargs: Additional keyword arguments to pass to the Handler object.
     """
-    super().__init__(listener, period_ms, log_name, log_level, *args, **kwargs)
+    super().__init__(listener, period_ms, *args, **kwargs)
     self.handler: SyncHandler = handler
   async def listen(self):
     while self.active:
@@ -141,7 +130,7 @@ class SyncListenerSyncHandler(SyncListenerHandler):
       await Sleep.async_ms(self.period_ms)
 class SyncListenerAsyncHandler(SyncListenerHandler):
   """Listener Handler Class"""
-  def __init__(self, listener: SyncListener, handler: AsyncHandler, period_ms: int = 100, log_name: str = "SyncListenerAsyncHandler", log_level: Logging.Level = Logging.LEVEL.INFO, *args, **kwargs):
+  def __init__(self, listener: SyncListener, handler: AsyncHandler, period_ms: int = 100, *args, **kwargs):
     """
     Constructs a new ListenerHandler object.
 
@@ -149,12 +138,10 @@ class SyncListenerAsyncHandler(SyncListenerHandler):
       listener (SyncListener): The Listener object to listen.
       handler (AsyncHandler): The Handler object to execute upon event occurrence.
       period_ms (int, optional): The period in milliseconds to check for events. Defaults to 100 ms.
-      log_name (str, optional): The log name for this ListenerHandler instance. Defaults to "SyncListenerAsyncHandler".
-      log_level (Logging.Level, optional): The log level for this ListenerHandler instance. Defaults to Logging.LEVEL.INFO.
       *args: Additional arguments to pass to the Handler object.
       **kwargs: Additional keyword arguments to pass to the Handler object.
     """
-    super().__init__(listener, period_ms, log_name, log_level, *args, **kwargs)
+    super().__init__(listener, period_ms, *args, **kwargs)
     self.handler: AsyncHandler = handler
   async def listen(self):
     while self.active:
@@ -163,7 +150,7 @@ class SyncListenerAsyncHandler(SyncListenerHandler):
       await Sleep.async_ms(self.period_ms)
 class AsyncListenerSyncHandler(AsyncListenerHandler):
   """Listener Handler Class"""
-  def __init__(self, listener: AsyncListener, handler: SyncHandler, period_ms: int = 100, log_name: str = "AsyncListenerSyncHandler", log_level: Logging.Level = Logging.LEVEL.INFO, *args, **kwargs):
+  def __init__(self, listener: AsyncListener, handler: SyncHandler, period_ms: int = 100, *args, **kwargs):
     """
     Constructs a new ListenerHandler object.
 
@@ -171,12 +158,10 @@ class AsyncListenerSyncHandler(AsyncListenerHandler):
       listener (AsyncListener): The Listener object to listen.
       handler (SyncHandler): The Handler object to execute upon event occurrence.
       period_ms (int, optional): The period in milliseconds to check for events. Defaults to 100 ms.
-      log_name (str, optional): The log name for this ListenerHandler instance. Defaults to "AsyncListenerSyncHandler".
-      log_level (Logging.Level, optional): The log level for this ListenerHandler instance. Defaults to Logging.LEVEL.INFO.
       *args: Additional arguments to pass to the Handler object.
       **kwargs: Additional keyword arguments to pass to the Handler object.
     """
-    super().__init__(listener, period_ms, log_name, log_level, *args, **kwargs)
+    super().__init__(listener, period_ms, *args, **kwargs)
     self.handler: SyncHandler = handler
   async def listen(self):
     while self.active:
@@ -185,7 +170,7 @@ class AsyncListenerSyncHandler(AsyncListenerHandler):
       await Sleep.async_ms(self.period_ms)
 class AsyncListenerAsyncHandler(AsyncListenerHandler):
   """Listener Handler Class"""
-  def __init__(self, listener: AsyncListener, handler: AsyncHandler, period_ms: int = 100, log_name: str = "AsyncListenerAsyncHandler", log_level: Logging.Level = Logging.LEVEL.INFO, *args, **kwargs):
+  def __init__(self, listener: AsyncListener, handler: AsyncHandler, period_ms: int = 100, *args, **kwargs):
     """
     Constructs a new ListenerHandler object.
 
@@ -193,12 +178,10 @@ class AsyncListenerAsyncHandler(AsyncListenerHandler):
       listener (AsyncListener): The Listener object to listen.
       handler (AsyncHandler): The Handler object to execute upon event occurrence.
       period_ms (int, optional): The period in milliseconds to check for events. Defaults to 100 ms.
-      log_name (str, optional): The log name for this ListenerHandler instance. Defaults to "AsyncListenerAsyncHandler".
-      log_level (Logging.Level, optional): The log level for this ListenerHandler instance. Defaults to Logging.LEVEL.INFO.
       *args: Additional arguments to pass to the Handler object.
       **kwargs: Additional keyword arguments to pass to the Handler object.
     """
-    super().__init__(listener, period_ms, log_name, log_level, *args, **kwargs)
+    super().__init__(listener, period_ms, *args, **kwargs)
     self.handler: AsyncHandler = handler
   async def listen(self):
     while self.active:

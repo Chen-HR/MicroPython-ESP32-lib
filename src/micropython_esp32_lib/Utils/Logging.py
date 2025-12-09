@@ -1,200 +1,251 @@
-"""
-# file: ./System/Logging.py
-"""
+import abc
+import sys
+import logging
+# import typing
+
 try: 
   from ..System import Time
-  from ..System import Sleep
-  from . import Enum
 except ImportError:
   from micropython_esp32_lib.System import Time
-  from micropython_esp32_lib.System import Sleep
-  from micropython_esp32_lib.Utils import Enum
 
-# --- Log Handler Interface (DIP) ---
-class LogHandler:
-  """Abstract base class for log output handlers (OCP)."""
-  def emit(self, record: str) -> None:
-    """Outputs the formatted log record."""
-    raise NotImplementedError
+_log_linefmt: str = "[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s"
+_log_timefmt: str = Time.Formater.String.DEFAULT_MS.formater
+_log_stream: sys.TextIO = sys.stderr # type: ignore
 
-class ConsoleHandler(LogHandler):
-  """Default handler that prints to the console."""
-  def emit(self, record: str) -> None:
-    print(record)
-
-_log_lock = None # type: ignore
 try:
-  from _thread import allocate_lock # type: ignore
-  class Lock: # Placeholder for type consistency
-    def acquire(self, waitflag: int = 1, timeout: float = -1): 
-      pass
-    def release(self): 
-      pass
-    def locked(self): 
-      pass
-  _log_lock: Lock = allocate_lock()
-except Exception:
-  class Lock_Implementation:
-    """A simple mock lock for demonstration purposes.
+  from ..System.Lock import allocate_lock, Lock
+except ImportError:
+  from micropython_esp32_lib.System.Lock import allocate_lock, Lock
+_log_locker: Lock = allocate_lock() # type: ignore
 
-    Reference: <https://docs.micropython.org/en/latest/library/_thread.html> -> <https://docs.python.org/3.5/library/_thread.html#module-_thread>
 
-    Lock objects have the following methods:
+class Level:
+  def __init__(self, code: int, name: str):
+    self.code: int = code
+    self.name: str = name
+  def __str__(self) -> str:
+    return f"Level({self.code}, {self.name})"
+  def __eq__(self, other: "Level") -> bool: # type: ignore
+    return self.code == other.code and self.name == other.name
+  @classmethod
+  def query(cls, code: int) -> "Level":
+    for pull in cls.__dict__.values():
+      if isinstance(pull, cls):
+        if pull.code == code:
+          return pull
+    raise ValueError(f"Unknown level code: {code}")
+  CRITICAL : "Level"
+  ERROR    : "Level"
+  WARNING  : "Level"
+  INFO     : "Level"
+  DEBUG    : "Level"
+  NOTSET   : "Level"
+Level.CRITICAL = Level(50, "CRITICAL")
+Level.ERROR    = Level(40, "ERROR")
+Level.WARNING  = Level(30, "WARNING")
+Level.INFO     = Level(20, "INFO")
+Level.DEBUG    = Level(10, "DEBUG")
+Level.NOTSET   = Level(0, "NOTSET")
+_log_level: Level = Level.WARNING
 
-    ## `lock.acquire(waitflag=1, timeout=-1)`
-    Without any optional argument, this method acquires the lock unconditionally, if necessary waiting until it is released by another thread (only one thread at a time can acquire a lock — that’s their reason for existence).
+class Record:
+  def set(self, name: str, level: Level, message: str):
+    self.name: str = name
+    self.levelno: int = level.code
+    self.levelname: str = level.name
+    self.message: str = message
+    self.currentTime_ns: Time.Time = Time.Time(Time.current_ns())
+    self.asctime: str = ""
 
-    If the integer waitflag argument is present, the action depends on its value: if it is zero, the lock is only acquired if it can be acquired immediately without waiting, while if it is nonzero, the lock is acquired unconditionally as above.
+class Formatter:
+  # def __init__(self, linefmt: str = _log_linefmt, timefmt: str = _log_timefmt):
+  #   self.linefmt = linefmt
+  #   self.timefmt = timefmt
+  # def usesTime(self):
+  #   return "asctime" in self.linefmt
+  @staticmethod
+  def formatTime(timefmt: str, record: Record) -> str:
+    return Time.Formater.format(record.currentTime_ns, Time.Formater.String(timefmt))
+  @staticmethod
+  def format(record: Record, linefmt: str = _log_linefmt, timefmt: str = _log_timefmt) -> str:
+    if "asctime" in linefmt:
+      record.asctime = Formatter.formatTime(timefmt, record)
+    return linefmt % {
+      "name": record.name,
+      "levelname": record.levelname,
+      "levelno": record.levelno,
+      "message": record.message,
+      "asctime": record.asctime
+    }
 
-    If the floating-point timeout argument is present and positive, it specifies the maximum wait time in seconds before returning. A negative timeout argument specifies an unbounded wait. You cannot specify a timeout if waitflag is zero.
-
-    The return value is True if the lock is acquired successfully, False if not.
-
-    Changed in version 3.2: The timeout parameter is new.
-
-    Changed in version 3.2: Lock acquires can now be interrupted by signals on POSIX.
-
-    ## `lock.release()`
-    Releases the lock. The lock must have been acquired earlier, but not necessarily by the same thread.
-
-    ## `lock.locked()`
-    Return the status of the lock: True if it has been acquired by some thread, False if not.
+class Handler(abc.ABC):
+  def __init__(self, level: Level = Level.NOTSET, formatter = Formatter):
+    self.level = level
+    self.formatter = formatter
+  @abc.abstractmethod
+  def close(self):
+    pass
+  def setLevel(self, level: Level):
+    self.level = level
+  def setFormatter(self, formatter):
+    self.formatter = formatter
+  def format(self, record: Record):
+    return self.formatter().format(record) # type: ignore
+  @abc.abstractmethod
+  def emit(self, record: Record):
+    pass
+class StreamHandler(Handler): # redo from logging.StreamHandler
+  def __init__(self, stream = _log_stream, terminator: str = "\n"):
     """
-    def __init__(self, start_locked=False):
-      """
-      Initialize the lock object.
-
-      Args:
-        start_locked (bool): Whether the lock should be initially locked (default: False).
-      """
-      self._locked = start_locked
-    def acquire(self, waitflag: int = 1, timeout: float = -1) -> bool:
-      """
-      Acquires the lock object.
-
-      Args:
-        waitflag (int, optional): The wait flag. If 0, the lock is only acquired if it can be acquired immediately without waiting. If nonzero, the lock is acquired unconditionally as above. Defaults to 1.
-        timeout (float, optional): The maximum wait time in seconds before returning. A negative timeout argument specifies an unbounded wait. Defaults to -1.
-
-      Returns:
-        bool: True if the lock is acquired successfully, False if not.
-
-      Notes:
-        If waitflag is zero, the lock is only acquired if it can be acquired immediately without waiting, while if it is nonzero, the lock is acquired unconditionally as above.
-        If the floating-point timeout argument is present and positive, it specifies the maximum wait time in seconds before returning. A negative timeout argument specifies an unbounded wait.
-      """
-      if waitflag != 0:
-        if timeout > 0:
-          timeout_ms = int(timeout * 1000)
-          while self._locked:
-            Sleep.sync_ms(1)
-            if timeout_ms > 0:
-              timeout_ms -= 1
-        elif timeout < 0:
-          while self._locked:
-            Sleep.sync_ms(1)
-      if self._locked:
-        return False
-      self._locked = True
-      return True
-    def release(self) -> bool:
-      """Releases the lock object.
-
-      Returns:
-        bool: True if the lock is released successfully, False if not.
-      """
-      if not self._locked:
-        return False
-      self._locked = False
-      return True
-    def locked(self) -> bool:
-      """Returns the status of the lock: True if it has been acquired by some thread, False if not.
-
-      Notes:
-        This method does not modify the state of the lock.
-      """
-      return self._locked
-  Lock = Lock_Implementation # type: ignore
-  def allocate_lock():
-    return Lock()
-  _log_lock: Lock = allocate_lock()
-
-class Level(Enum.Unit):
-  """Represents a logging level."""
-  def __init__(self, name: str, level: int):
-    super().__init__(name, level)
-  def __eq__(self, other) -> bool:
-    if isinstance(other, Level): return self.value == other.value
-    return False
-  def __repr__(self) -> str:
-    return f"Level({self.name}, {self.value})"
-  def lower(self, level) -> bool:
-    # _level: Level = level
-    if isinstance(level, Level):
-      return self.value < level.value
-    raise ValueError(f"Can't compare with {type(level)}")
-class LEVEL:
-  DEBUG   = Level("DEBUG", 0)
-  INFO    = Level("INFO", 1)
-  WARNING = Level("WARNING", 2)
-  ERROR   = Level("ERROR", 3)
-  NONE    = Level("NONE", 4)
-
-class Log: 
-  # time_formatter_func = Time.Time
-  time_formatter_str: str = Time.TimeFormater.DEFAULT_NS
-  time_formatter_func = lambda _: Time.Time().format(Log.time_formatter_str)
-  # Set default handler
-  handler: LogHandler = ConsoleHandler() 
-
-  @classmethod
-  def set_time_formatter_str(cls, formatter_str: str):
-    cls.time_formatter_str = formatter_str
-  @classmethod
-  def set_time_formatter_func(cls, formatter_func):
-    cls.time_formatter_func = formatter_func
-  @classmethod
-  def set_handler(cls, handler_object: LogHandler):
-    """Set a custom log output handler (e.g., FileHandler, SocketHandler)."""
-    cls.handler = handler_object
-
-  def __init__(self, name: str, level: Level | None = None):
-    if level is None: level = LEVEL.INFO
-    self.name = name
-    self.level = level    
-
-  def _log(self, level: Level, message: str) -> None:
-    if level.lower(self.level):
-      return
-
+    Args:
+        stream (typing.IO, optional): _description_. Defaults to _log_stream.
+        terminator (str, optional): _description_. Defaults to "\\n".
+    """
+    super().__init__()
+    self.stream = stream
+    self.terminator = terminator
+  def close(self):
+    if hasattr(self.stream, "flush"):
+      self.stream.flush() # type: ignore
+  def _lock(self, record: Record):
+    global _log_locker
     try:
-      _log_lock.acquire()
-      timestamp = self.time_formatter_func() 
-      output = f"[{timestamp}] [{level.name}] [{self.name}] {message}"
-      self.handler.emit(output) 
+      _log_locker.acquire()
+      self.stream.write(self.format(record) + self.terminator) # type: ignore
+    except Exception as e:
+      raise e
     finally:
-      _log_lock.release()
+      _log_locker.release()
+  def emit(self, record: Record):
+    if record.levelno >= self.level.code:
+      self._lock(record)
+class FileHandler(StreamHandler):
+  def __init__(self, filename: str, mode: str="a", encoding: str="UTF-8"):
+    super().__init__(stream=open(filename, mode=mode, encoding=encoding))
+  def close(self):
+    super().close()
+    self.stream.close()
 
-  def debug(self, message: str) -> None:
-    self._log(LEVEL.DEBUG, message)
+class Logger:
+  def __init__(self, name: str, level: Level = _log_level, handlers: list[Handler] = []):
+    self.name: str = name
+    self.level: Level = level
+    self.handlers: list[Handler] = handlers
+    self.record = Record()
+  def setLevel(self, level: Level):
+    self.level = level
+  def getEffectiveLevel(self):
+    return self.level or getLogger().level or _log_level
+  def isEnabledFor(self, level: Level) -> bool:
+    return level.code >= self.getEffectiveLevel().code
+  def addHandler(self, handler):
+    self.handlers.append(handler)
+  def hasHandlers(self) -> bool:
+    return len(self.handlers) > 0
+  def log(self, level: Level, msg: str, *args):
+    if self.isEnabledFor(level):
+      if args:
+        if isinstance(args[0], dict):
+          args = args[0]
+        msg = msg % args
+      self.record.set(self.name, level, msg)
+      handlers = self.handlers
+      if not handlers:
+        handlers = getLogger().handlers
+      for h in handlers:
+        h.emit(self.record)
+  def notset(self, msg: str, *args):
+    self.log(Level.NOTSET, msg, *args)
+  def debug(self, msg: str, *args):
+    self.log(Level.DEBUG, msg, *args)
+  def info(self, msg: str, *args):
+    self.log(Level.INFO, msg, *args)
+  def warning(self, msg: str, *args):
+    self.log(Level.WARNING, msg, *args)
+  def error(self, msg: str, *args):
+    self.log(Level.ERROR, msg, *args)
+  def critical(self, msg: str, *args):
+    self.log(Level.CRITICAL, msg, *args)
+  def exception(self, msg: str, *args, exc_info=True):
+    self.log(Level.ERROR, msg, *args)
+    # tb: typing.Never | BaseException | None
+    tb = None
+    if isinstance(exc_info, BaseException):
+      tb = exc_info
+    elif hasattr(sys, "exc_info"):
+      tb = sys.exc_info()[1]
+    if tb:
+      buf = io.StringIO() # type: ignore
+      sys.print_exception(tb, buf) # type: ignore
+      self.log(Level.ERROR, buf.getvalue()) # type: ignore
+_loggers: dict[str, Logger] = {}
 
-  def info(self, message: str) -> None:
-    self._log(LEVEL.INFO, message)
+def config_stream(name: str | None = None, stream = _log_stream, level: Level = _log_level):
+  """_summary_
 
-  def warning(self, message: str) -> None:
-    self._log(LEVEL.WARNING, message)
+  Args:
+      name (str | None, optional): _description_. Defaults to None.
+      stream (typing.TextIO, optional): _description_. Defaults to _log_stream.
+      level (Level, optional): _description_. Defaults to _log_level.
+  """
+  global _loggers
+  if name is None: name = "root"
+  if name not in _loggers: 
+    _loggers[name] = Logger(name, level, [StreamHandler(stream)])
+  else:
+    _loggers[name].setLevel(level)
+    _loggers[name].addHandler(StreamHandler(stream))
+def config_file(name: str | None = None, filename: str | None = None, filemode: str = "a", encoding: str = "UTF-8", level: Level = _log_level):
+  global _loggers
+  if name is None: name = "root"
+  if filename is None: filename = f"{name}.log"
+  if name not in _loggers: 
+    _loggers[name] = Logger(name, level, [FileHandler(filename, filemode, encoding)])
+  else:
+    _loggers[name].setLevel(level)
+    _loggers[name].addHandler(FileHandler(filename, filemode, encoding))
 
-  def error(self, message: str) -> None:
-    self._log(LEVEL.ERROR, message)
+def getLogger(name: str | None = None):
+  global _loggers
+  if name is None: name = "root"
+  if name not in _loggers:
+    _loggers[name] = Logger(name)
+    if name == "root": config_stream()
+  return _loggers[name]
 
-if __name__ == "__main__":
-  log = Log("Test Log", LEVEL.DEBUG)
-  log.debug("This is a debug message")
-  log.info("This is an info message")
-  log.warning("This is a warning message")
-  log.error("This is an error message")
-  Log.set_time_formatter_str(Time.TimeFormater.ISO8601_MS)
-  log.debug("This is a debug message")
-  log.info("This is an info message")
-  log.warning("This is a warning message")
-  log.error("This is an error message")
+def shutdown():
+  keys = list(_loggers.keys())
+  for k in keys:
+    logger = _loggers.get(k)
+    if not logger:
+      continue
+    for h in logger.handlers:
+      h.close()
+    _loggers.pop(k, None)
+
+if hasattr(sys, "atexit"):
+  sys.atexit(shutdown) # type: ignore
+
+def log(level: Level, message: str, *args):
+  getLogger().log(level, message, *args)
+def notset(message: str, *args):
+  getLogger().notset(message, *args)
+def debug(message: str, *args):
+  getLogger().debug(message, *args)
+def info(message: str, *args):
+  getLogger().info(message, *args)
+def warning(message: str, *args):
+  getLogger().warning(message, *args)
+def error(message: str, *args):
+  getLogger().error(message, *args)
+def critical(message: str, *args):
+  getLogger().critical(message, *args)
+
+if __name__ == "__main__": # pragma: no cover
+  logger = getLogger()
+  logger.notset("Notset message.")
+  logger.debug("Debug message.")
+  logger.info("Info message.")
+  logger.warning("Warning message.")
+  logger.error("Error message.")
+  logger.critical("Critical message.")

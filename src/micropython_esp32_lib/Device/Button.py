@@ -2,45 +2,52 @@
 # file: ./Device/Button.py
 """
 
-import machine
+import machine # type: ignore
 import asyncio
 import abc
 
 try:
-  from ..System import Timer
-  from ..System import Sleep
+  from ..System.Time import Timer
+  from ..System.Time import Sleep
   from ..System import Digital
-  from ..Utils import Enum
-  from ..Utils import Flag
   from ..Utils import Logging
-  from ..Utils import DigitalFilters
+  from ..Utils import Flag
   from ..Utils import ListenerHandler
 except ImportError:
-  from micropython_esp32_lib.System import Timer
-  from micropython_esp32_lib.System import Sleep
+  from micropython_esp32_lib.System.Time import Timer
+  from micropython_esp32_lib.System.Time import Sleep
   from micropython_esp32_lib.System import Digital
-  from micropython_esp32_lib.Utils import Enum
-  from micropython_esp32_lib.Utils import Flag
   from micropython_esp32_lib.Utils import Logging
-  from micropython_esp32_lib.Utils import DigitalFilters
+  from micropython_esp32_lib.Utils import Flag
   from micropython_esp32_lib.Utils import ListenerHandler
 
-class State(Enum.Unit):
-  def __eq__(self, other) -> bool:
-    if isinstance(other, State): return self.value == other.value
-    return False
-class STATE:
-  BOUNCING = State("BOUNCING", 0)
-  RELEASED = State("RELEASED", 1)
-  PRESSED = State("PRESSED", 2)
-
+class State:
+  def __init__(self, code: int, name: str):
+    self.code: int = code
+    self.name: str = name
+  def __str__(self) -> str:
+    return f"State({self.code}, {self.name})"
+  def __eq__(self, other: "State") -> bool: # type: ignore
+    return self.code == other.code and self.name == other.name
+  @classmethod
+  def query(cls, code: int) -> "State":
+    for state in cls.__dict__.values():
+      if isinstance(state, cls):
+        if state.code == code:
+          return state
+    raise ValueError(f"Unknown State code: {code}")
+  BOUNCING: "State"
+  RELEASED: "State"
+  PRESSED : "State"
+State.BOUNCING = State(0, "BOUNCING")
+State.RELEASED = State(1, "RELEASED")
+State.PRESSED  = State(2, "PRESSED" )
 class BaseButton(abc.ABC):
-  def __init__(self, pin: machine.Pin, released_signal: Digital.Signal, interval_ms: int = 16, log_name: str = "Button", log_level: Logging.Level = Logging.LEVEL.INFO):
+  def __init__(self, pin: machine.Pin, released_signal: Digital.Signal, interval_ms: int = 16):
     self.pin: machine.Pin = pin
     self.released_signal: Digital.Signal = released_signal
-    self.pressed_signal: Digital.Signal = Digital.SIGNAL.inverse(released_signal)
+    self.pressed_signal: Digital.Signal = Digital.Signal.inverse(released_signal)
     self.interval_ms: int = interval_ms
-    self.logger: Logging.Log = Logging.Log(log_name, log_level)
   @abc.abstractmethod
   async def getState(self) -> State:
     pass
@@ -59,14 +66,14 @@ class BaseButton(abc.ABC):
 
 
 class ImmediateDebounceButton(BaseButton):
-  def __init__(self, pin: machine.Pin, released_signal: Digital.Signal, interval_ms: int = 16, log_name: str = "ImmediateDebounceButton", log_level: Logging.Level = Logging.LEVEL.INFO):
-    super().__init__(pin, released_signal, interval_ms, log_name, log_level)
+  def __init__(self, pin: machine.Pin, released_signal: Digital.Signal, interval_ms: int = 16):
+    super().__init__(pin, released_signal, interval_ms)
   async def getState(self) -> State:
     await Sleep.async_ms(1)
     pinValue: int = self.pin.value()
-    if pinValue == self.released_signal: return STATE.RELEASED
-    elif pinValue == self.pressed_signal: return STATE.PRESSED
-    return STATE.BOUNCING
+    if pinValue == self.released_signal: return State.RELEASED
+    elif pinValue == self.pressed_signal: return State.PRESSED
+    return State.BOUNCING
   async def isReleased(self) -> bool:
     await Sleep.async_ms(1)
     return self.pin.value() == self.released_signal
@@ -85,8 +92,8 @@ class ImmediateDebounceButton(BaseButton):
     return False
 
 class CountFilteringImmediateDebounceButton(ImmediateDebounceButton):
-  def __init__(self, pin: machine.Pin, released_signal: Digital.Signal, interval_ms: int = 1, threshold: int = 16, log_name: str = "CountFilteringImmediateDebounceButton", log_level: Logging.Level = Logging.LEVEL.INFO):
-    super().__init__(pin, released_signal, interval_ms, log_name, log_level)
+  def __init__(self, pin: machine.Pin, released_signal: Digital.Signal, interval_ms: int = 1, threshold: int = 16):
+    super().__init__(pin, released_signal, interval_ms)
     self.threshold: int = threshold
   async def getState(self):
     cnt: int = 0
@@ -94,49 +101,49 @@ class CountFilteringImmediateDebounceButton(ImmediateDebounceButton):
       cnt += self.pin.value()
       await Sleep.async_ms(self.interval_ms)
     if cnt == self.threshold: 
-      return STATE.RELEASED if self.released_signal.value == 1 else STATE.PRESSED
+      return State.RELEASED if self.released_signal.value == 1 else State.PRESSED
     elif cnt == 0: 
-      return STATE.PRESSED if self.pressed_signal.value == 0 else STATE.RELEASED
-    return STATE.BOUNCING
+      return State.PRESSED if self.pressed_signal.value == 0 else State.RELEASED
+    return State.BOUNCING
   async def isReleased(self) -> bool:
-    return await DigitalFilters.countFiltering_async(self.pin, self.released_signal, self.threshold, self.interval_ms)
+    return await Digital.countFiltering_async(self.pin, self.released_signal, self.threshold, self.interval_ms)
   async def isPressed(self) -> bool:
-    return await DigitalFilters.countFiltering_async(self.pin, self.pressed_signal, self.threshold, self.interval_ms)
+    return await Digital.countFiltering_async(self.pin, self.pressed_signal, self.threshold, self.interval_ms)
   async def isToReleased(self) -> bool:
-    return await DigitalFilters.isChangedStably_async(self.pin, self.pressed_signal, self.released_signal, self.threshold, self.interval_ms)
+    return await Digital.isChangedStably_async(self.pin, self.pressed_signal, self.released_signal, self.threshold, self.interval_ms)
   async def isToPressed(self) -> bool:
-    return await DigitalFilters.isChangedStably_async(self.pin, self.released_signal, self.pressed_signal, self.threshold, self.interval_ms)
+    return await Digital.isChangedStably_async(self.pin, self.released_signal, self.pressed_signal, self.threshold, self.interval_ms)
 
 class StateDebounceButton(BaseButton):
-  def __init__(self, pin: machine.Pin, released_signal: Digital.Signal, interval_ms: int = 16, log_name: str = "StateDebounceButton", log_level: Logging.Level = Logging.LEVEL.INFO):
-    super().__init__(pin, released_signal, interval_ms, log_name, log_level)
-    self._last_state: State = STATE.BOUNCING
+  def __init__(self, pin: machine.Pin, released_signal: Digital.Signal, interval_ms: int = 16):
+    super().__init__(pin, released_signal, interval_ms)
+    self._last_state: State = State.BOUNCING
   async def getState(self):
     # await Sleep.async_ms(1)
     pinValue: int = self.pin.value()
     if pinValue == self.released_signal.value: 
-      self._last_state = STATE.RELEASED
+      self._last_state = State.RELEASED
     elif pinValue == self.pressed_signal.value: 
-      self._last_state = STATE.PRESSED
+      self._last_state = State.PRESSED
     else: 
-      self._last_state = STATE.BOUNCING
+      self._last_state = State.BOUNCING
     return self._last_state
   async def isReleased(self) -> bool:
     state = await self.getState()
-    return state == STATE.RELEASED
+    return state == State.RELEASED
   async def isPressed(self) -> bool:
     state = await self.getState()
-    return state == STATE.PRESSED
+    return state == State.PRESSED
   async def isToReleased(self) -> bool:
-    if self._last_state == STATE.BOUNCING: self._last_state = await self.getState()
-    if self._last_state == STATE.PRESSED:
+    if self._last_state == State.BOUNCING: self._last_state = await self.getState()
+    if self._last_state == State.PRESSED:
       await Sleep.async_ms(self.interval_ms)
       if await self.isReleased():
         return True
     return False
   async def isToPressed(self) -> bool:
-    if self._last_state == STATE.BOUNCING: self._last_state = await self.getState()
-    if self._last_state == STATE.RELEASED:
+    if self._last_state == State.BOUNCING: self._last_state = await self.getState()
+    if self._last_state == State.RELEASED:
       await Sleep.async_ms(self.interval_ms)
       if await self.isPressed():
         return True
@@ -148,45 +155,44 @@ class InterruptDrivenStateDebounceButton(StateDebounceButton):
       self.handler = handler
     async def handle(self, obj = None, *args, **kwargs) -> None:
       asyncio.create_task(self.handler())
-  def __init__(self, pin: machine.Pin, released_signal: Digital.Signal, 
-               interval_ms: int = 32, 
-               log_name: str = "InterruptDrivenStateDebounceButton", log_level: Logging.Level = Logging.LEVEL.INFO):
-    super().__init__(pin, released_signal, interval_ms, log_name, log_level)
-    self._current_state: State = STATE.BOUNCING
-    self.pin.irq(trigger=Digital.IRQCode.IRQ_RISING | Digital.IRQCode.IRQ_FALLING, handler=self._irq_handler)
+  def __init__(self, pin: machine.Pin, released_signal: Digital.Signal, interval_ms: int = 32):
+    super().__init__(pin, released_signal, interval_ms)
+    self._current_state: State = State.BOUNCING
+    self.pin.irq(trigger=Digital.IRQTrigger.RISING.code | Digital.IRQTrigger.FALLING.code, handler=self._irq_handler)
     self._irq_flag: Flag.BooleanFlag = Flag.BooleanFlag()
     self._irq_listenerHandler: ListenerHandler.SyncListenerAsyncHandler = ListenerHandler.SyncListenerAsyncHandler(Flag.BooleanFlagListener(self._irq_flag), InterruptDrivenStateDebounceButton.EdgeHandler(self._irq_agentHandler))
-    self._debounce_timer = Timer.AsyncTimer(interval_ms=self.interval_ms, callback=self._debounce_handler, callback_isAsync=True, repeat=False, log_name=f"{log_name}.DebounceTimer", log_level=log_level)
+    # self._debounce_timer = Timer.AsyncTimer(period_ms=self.interval_ms, async_callback=InterruptDrivenStateDebounceButton.EdgeHandler(self._debounce_handler))
+    self._debounce_timer = Timer.ListenerTimer.AsyncListenerAsyncHandler(period_ms=self.interval_ms, asyncHandler=InterruptDrivenStateDebounceButton.EdgeHandler(self._debounce_handler), mode=Timer.ListenerTimer.Mode.ONE_SHOT)
     self._toReleased_flag: Flag.BooleanFlag = Flag.BooleanFlag()
     self._toPressed_flag: Flag.BooleanFlag = Flag.BooleanFlag()
   async def activate(self):
-    self.logger.debug("[activate] Initializing InterruptDrivenStateDebounceButton...")
+    # self.logger.debug("[activate] Initializing InterruptDrivenStateDebounceButton...")
     await self._debounce_timer.activate()
     await self._irq_listenerHandler.activate()
   def _irq_handler(self, pin: machine.Pin):
     self._irq_flag.activate()
   async def _irq_agentHandler(self):
-    self.logger.debug("[_irq_agentHandler] IRQ flag detected.")
+    # self.logger.debug("[_irq_agentHandler] IRQ flag detected.")
     self._last_state = self._current_state
-    self._current_state = STATE.BOUNCING
-    await self._debounce_timer.reactivate()
+    self._current_state = State.BOUNCING
+    await self._debounce_timer.activate()
     self._irq_flag.deactivate()
   async def _debounce_handler(self):
     pinValue: int = self.pin.value()
-    self.logger.debug(f"[_debounce_handler] Debounce handler triggered. pinValue={pinValue}, lastState={self._last_state}, currentState={self._current_state}")
+    # self.logger.debug(f"[_debounce_handler] Debounce handler triggered. pinValue={pinValue}, lastState={self._last_state}, currentState={self._current_state}")
     if pinValue == self.released_signal.value: 
-      self._current_state = STATE.RELEASED
+      self._current_state = State.RELEASED
     elif pinValue == self.pressed_signal.value: 
-      self._current_state = STATE.PRESSED
+      self._current_state = State.PRESSED
     else: 
-      await self._debounce_timer.reactivate()
-      self.logger.warning("Pin state is still ambiguous after debounce.")
+      await self._debounce_timer.activate()
+      # self.logger.warning("Pin state is still ambiguous after debounce.")
     
-    if self._current_state == STATE.RELEASED and self._last_state != STATE.RELEASED:
+    if self._current_state == State.RELEASED and self._last_state != State.RELEASED:
       self._toReleased_flag.activate()
       await Sleep.async_ms(self.interval_ms<<1)
       self._toReleased_flag.deactivate()
-    elif self._current_state == STATE.PRESSED and self._last_state != STATE.PRESSED:
+    elif self._current_state == State.PRESSED and self._last_state != State.PRESSED:
       self._toPressed_flag.activate()
       await Sleep.async_ms(self.interval_ms<<1)
       self._toPressed_flag.deactivate()
@@ -195,13 +201,13 @@ class InterruptDrivenStateDebounceButton(StateDebounceButton):
     return self._current_state
   async def isReleased(self) -> bool:
     await Sleep.async_ms(1)
-    return self._current_state == STATE.RELEASED
+    return self._current_state == State.RELEASED
   async def isPressed(self) -> bool:
     await Sleep.async_ms(1)
-    return self._current_state == STATE.PRESSED
+    return self._current_state == State.PRESSED
   async def isBouncing(self) -> bool:
     await Sleep.async_ms(1)
-    return self._current_state == STATE.BOUNCING
+    return self._current_state == State.BOUNCING
   async def isToReleased(self) -> bool:
     if self._toReleased_flag.isActivate():
       self._toReleased_flag.deactivate()
@@ -217,52 +223,54 @@ class InterruptDrivenStateDebounceButton(StateDebounceButton):
     self._irq_listenerHandler.deactivate()
 
 class OnPressedListener(ListenerHandler.AsyncListener):
-  def __init__(self, button: BaseButton, interval_ms: int = 10, log_name: str = "OnPressedListener", log_level: Logging.Level = Logging.LEVEL.INFO):
+  def __init__(self, button: BaseButton, interval_ms: int = 10):
     self.button: BaseButton = button
     self.interval_ms: int = interval_ms
-    self.logger: Logging.Log = Logging.Log(log_name, log_level)
+    # self.logger: Logging.Log = Logging.Log(log_name, log_level)
   async def listen(self, obj = None, *args, **kwargs) -> bool:
     return await self.button.isToPressed()
 class OnReleasedListener(ListenerHandler.AsyncListener):
-  def __init__(self, button: BaseButton, interval_ms: int = 10, log_name: str = "OnReleasedListener", log_level: Logging.Level = Logging.LEVEL.INFO):
+  def __init__(self, button: BaseButton, interval_ms: int = 10):
     self.button: BaseButton = button
     self.interval_ms: int = interval_ms
-    self.logger: Logging.Log = Logging.Log(log_name, log_level)
+    # self.logger: Logging.Log = Logging.Log(log_name, log_level)
   async def listen(self, obj = None, *args, **kwargs) -> bool:
     return await self.button.isToReleased()
 
 if __name__ == "__main__":
   class TestSyncHandler(ListenerHandler.SyncHandler):
-    def __init__(self, log_name: str, log_level: Logging.Level = Logging.LEVEL.INFO):
-      self.logger = Logging.Log(log_name, log_level)
+    # def __init__(self):
+    #   self.logger = Logging.Log(log_name, log_level)
     def handle(self, obj = None, *args, **kwargs) -> None:
-      self.logger.info("TestSyncHandler.handle() executed.")
+      Logging.info("TestSyncHandler.handle() executed.")
   class TestAsyncHandler(ListenerHandler.AsyncHandler):
-    def __init__(self, log_name: str, log_level: Logging.Level = Logging.LEVEL.INFO):
-      self.logger = Logging.Log(log_name, log_level)
+    # def __init__(self):
+    #   self.logger = Logging.Log(log_name, log_level)
     async def handle(self, obj = None, *args, **kwargs) -> None:
       await Sleep.async_ms(1)
-      self.logger.info(f"TestAsyncHandler.handle() executed.")
+      Logging.info(f"TestAsyncHandler.handle() executed.")
 
-  logger = Logging.Log("main", Logging.LEVEL.INFO)
+  # logger = Logging.Log("main", Logging.LEVEL.INFO)
   pin_a = machine.Pin(19, machine.Pin.IN, machine.Pin.PULL_UP)
   pin_b = machine.Pin(20, machine.Pin.IN, machine.Pin.PULL_UP)
   pin_c = machine.Pin(21, machine.Pin.IN, machine.Pin.PULL_UP)
 
-  log_level = Logging.LEVEL.INFO
-  btn_a = CountFilteringImmediateDebounceButton (pin_a, Digital.SIGNAL.HIGH, log_name="btn_a", log_level=log_level)
-  btn_b = StateDebounceButton                   (pin_b, Digital.SIGNAL.HIGH, log_name="btn_b", log_level=log_level)
-  btn_c = InterruptDrivenStateDebounceButton    (pin_c, Digital.SIGNAL.HIGH, log_name="btn_c", log_level=log_level)
+  # log_level = Logging.LEVEL.INFO
+  btn_a = CountFilteringImmediateDebounceButton (pin_a, Digital.Signal.HIGH)
+  btn_b = StateDebounceButton                   (pin_b, Digital.Signal.HIGH)
+  btn_c = InterruptDrivenStateDebounceButton    (pin_c, Digital.Signal.HIGH)
   try: 
     async def testSyncHandler():
-      logger.info("Starting TestSyncHandler...")
+      Logging.info("Starting TestSyncHandler...")
       await btn_c.activate()
-      await ListenerHandler.AsyncListenerSyncHandler(OnPressedListener (btn_a, log_name="btn_a.OnPressedListener" , log_level=log_level), TestSyncHandler(log_name="btn_a.OnPressedHandler" , log_level=log_level), log_name="btn_a.OnPressedListenerSyncHandler" , log_level=log_level).activate()
-      await ListenerHandler.AsyncListenerSyncHandler(OnReleasedListener(btn_a, log_name="btn_a.OnReleasedListener", log_level=log_level), TestSyncHandler(log_name="btn_a.OnReleasedHandler", log_level=log_level), log_name="btn_a.OnReleasedListenerSyncHandler", log_level=log_level).activate()
-      await ListenerHandler.AsyncListenerSyncHandler(OnPressedListener (btn_b, log_name="btn_b.OnPressedListener" , log_level=log_level), TestSyncHandler(log_name="btn_b.OnPressedHandler" , log_level=log_level), log_name="btn_b.OnPressedListenerSyncHandler" , log_level=log_level).activate()
-      await ListenerHandler.AsyncListenerSyncHandler(OnReleasedListener(btn_b, log_name="btn_b.OnReleasedListener", log_level=log_level), TestSyncHandler(log_name="btn_b.OnReleasedHandler", log_level=log_level), log_name="btn_b.OnReleasedListenerSyncHandler", log_level=log_level).activate()
-      await ListenerHandler.AsyncListenerSyncHandler(OnPressedListener (btn_c, log_name="btn_c.OnPressedListener" , log_level=log_level), TestSyncHandler(log_name="btn_c.OnPressedHandler" , log_level=log_level), log_name="btn_c.OnPressedListenerSyncHandler" , log_level=log_level).activate()
-      await ListenerHandler.AsyncListenerSyncHandler(OnReleasedListener(btn_c, log_name="btn_c.OnReleasedListener", log_level=log_level), TestSyncHandler(log_name="btn_c.OnReleasedHandler", log_level=log_level), log_name="btn_c.OnReleasedListenerSyncHandler", log_level=log_level).activate()
+      await ListenerHandler.AsyncListenerSyncHandler(OnPressedListener (btn_a), TestSyncHandler()).activate()
+      # await ListenerHandler.AsyncListenerSyncHandler(OnReleasedListener(btn_a), TestSyncHandler()).activate()
+
+      # await ListenerHandler.AsyncListenerSyncHandler(OnPressedListener (btn_b), TestSyncHandler()).activate()
+      await ListenerHandler.AsyncListenerSyncHandler(OnReleasedListener(btn_b), TestSyncHandler()).activate()
+
+      await ListenerHandler.AsyncListenerSyncHandler(OnPressedListener (btn_c), TestSyncHandler()).activate()
+      await ListenerHandler.AsyncListenerSyncHandler(OnReleasedListener(btn_c), TestSyncHandler()).activate()
       while True:
         await Sleep.async_s(1)
     asyncio.run(testSyncHandler())

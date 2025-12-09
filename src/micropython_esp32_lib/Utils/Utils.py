@@ -181,7 +181,7 @@ class IdManager:
     self._check_if_full()
     
     while True:
-      candidate_id = random.randrange(0, self.max_id)
+      candidate_id = urandom.randrange(0, self.max_id)
       if candidate_id not in self.used_ids:
         self.used_ids.add(candidate_id)
         return candidate_id

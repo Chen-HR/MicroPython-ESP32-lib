@@ -1,16 +1,16 @@
 # src/micropython_esp32_lib/Device/LED.py
-import machine
-import neopixel # For RGBLEDPixels
+import machine # type: ignore
+import neopixel # type: ignore
 # import urandom # For testing only
 
 try:
   from ..Utils import Utils
   from ..Utils import Logging
-  from ..System import Sleep # For utime.sleep_ms and utime.sleep in main block
+  from ..System.Time import Sleep # For utime.sleep_ms and utime.sleep in main block
 except ImportError:
   from micropython_esp32_lib.Utils import Utils
   from micropython_esp32_lib.Utils import Logging
-  from micropython_esp32_lib.System import Sleep
+  from micropython_esp32_lib.System.Time import Sleep
 
 class LED:
   def __init__(self, pin: machine.Pin, statuOn_dutyRatio: float = 1.0, statuOff_dutyRatio: float = 0.0, frequency_Hz: int = 256) -> None:
@@ -77,11 +77,11 @@ class RGBLEDPixels:
     return [Utils.RGB(p.r, p.g, p.b) for p in self.pixels] # Return a copy of Utils.RGB objects
 
 if __name__ == "__main__":
-  import urandom
-  logger_main = Logging.Log("LED_Test", Logging.LEVEL.INFO)
+  import urandom # type: ignore
+  # Logging = Logging.Log("LED_Test", Logging.LEVEL.INFO)
   
   # Test 1: LED
-  logger_main.info("Testing LED class.")
+  Logging.info("Testing LED class.")
   pwmled: LED = LED(machine.Pin(16, machine.Pin.OUT)) # Specify Pin.OUT
   try:
     pwmled.on()
@@ -90,7 +90,7 @@ if __name__ == "__main__":
     Sleep.sync_s(0.5)
     pwmled.toggle()
     Sleep.sync_s(0.5)
-    logger_main.info("Fading in/out LED...")
+    Logging.info("Fading in/out LED...")
     for i in range(1001):
       pwmled.set(i / 1000.0)
       Sleep.sync_ms(1)
@@ -99,19 +99,19 @@ if __name__ == "__main__":
       Sleep.sync_ms(1)
     pwmled.off() # Ensure it's off after test
   except KeyboardInterrupt:
-    logger_main.info("LED test interrupted.")
+    Logging.info("LED test interrupted.")
   except Exception as e:
-    logger_main.error(f"LED test failed: {e}")
+    Logging.error(f"LED test failed: {e}")
   finally:
     try: # Ensure PWM resource is deinitialized
         pwmled.pin_pwm.deinit()
     except AttributeError:
         pass # pwmled might not have been fully initialized
 
-  logger_main.info("\n" + "="*50)
+  Logging.info("\n" + "="*50)
   # Test 2: RGBLED (Common Anode/Cathode) - assuming common anode for simplicity (lower duty = brighter)
   # For ESP32, you often specify the pin mode explicitly, e.g., machine.Pin(PIN, machine.Pin.OUT)
-  logger_main.info("Testing RGBLED class.")
+  Logging.info("Testing RGBLED class.")
   rgbled_pins = {
     'R': machine.Pin(18, machine.Pin.OUT),
     'G': machine.Pin(17, machine.Pin.OUT),
@@ -134,14 +134,14 @@ if __name__ == "__main__":
     r_init, g_init, b_init = urandom.randint(0, Utils.UINT08_MAX), urandom.randint(0, Utils.UINT08_MAX), urandom.randint(0, Utils.UINT08_MAX)
     alpha = urandom.randint(100, Utils.UINT08_MAX) # Initial alpha for test
     rgbled.set_color(r_init, g_init, b_init, alpha)
-    logger_main.info(f"Initial Utils.RGBA: ({r_init:03d}, {g_init:03d}, {b_init:03d}, {alpha:03d})")
+    Logging.info(f"Initial Utils.RGBA: ({r_init:03d}, {g_init:03d}, {b_init:03d}, {alpha:03d})")
 
     while True:
       r_target, g_target, b_target = urandom.randint(0, Utils.UINT08_MAX), urandom.randint(0, Utils.UINT08_MAX), urandom.randint(0, Utils.UINT08_MAX)
       alpha_target = urandom.randint(100, Utils.UINT08_MAX)
       rounds: int = urandom.randint(300, 600)
       
-      logger_main.info(f"Fading to Utils.RGBA: ({r_target:03d}, {g_target:03d}, {b_target:03d}, {alpha_target:03d}) over {rounds} steps.")
+      Logging.info(f"Fading to Utils.RGBA: ({r_target:03d}, {g_target:03d}, {b_target:03d}, {alpha_target:03d}) over {rounds} steps.")
       
       for i in range(rounds):
         r_tmp = Utils.mapping(i, 0, rounds, r_init, r_target)
@@ -154,9 +154,9 @@ if __name__ == "__main__":
       r_init, g_init, b_init, alpha = r_target, g_target, b_target, alpha_target
       Sleep.sync_ms(500) # Short pause before next fade
   except KeyboardInterrupt:
-    logger_main.info("RGBLED test interrupted.")
+    Logging.info("RGBLED test interrupted.")
   except Exception as e:
-    logger_main.error(f"RGBLED test failed: {e}")
+    Logging.error(f"RGBLED test failed: {e}")
   finally:
     rgbled.set_color(0, 0, 0, 0) # Turn off LED
     # Deinitialize PWM pins
@@ -165,16 +165,16 @@ if __name__ == "__main__":
             machine.PWM(pin_obj).deinit() # Re-initialize to deinit, safe way
         except (TypeError, ValueError, AttributeError): # Added AttributeError
             pass # Pin might not be a PWM pin or already deinit'd
-    logger_main.info("RGBLED test ended.")
+    Logging.info("RGBLED test ended.")
 
-  logger_main.info("\n" + "="*50)
+  Logging.info("\n" + "="*50)
   # Test 3: RGBLEDPixels (NeoPixel/WS2812B)
-  logger_main.info("Testing RGBLEDPixels class.")
+  Logging.info("Testing RGBLEDPixels class.")
   size: int = 4 # Number of pixels
   # Ensure pin is configured for output when creating NeoPixel instance
   neopixel_pin = machine.Pin(48, machine.Pin.OUT) 
   rgbLedPixels: RGBLEDPixels = RGBLEDPixels(neopixel_pin, size, pixels=[Utils.RGB(urandom.randint(0, Utils.UINT08_MAX), urandom.randint(0, Utils.UINT08_MAX), urandom.randint(0, Utils.UINT08_MAX)) for _ in range(size)])
-  logger_main.info(f"Initial NeoPixel Utils.RGB values: {[p.get() for p in rgbLedPixels.get()]}")
+  Logging.info(f"Initial NeoPixel Utils.RGB values: {[p.get() for p in rgbLedPixels.get()]}")
   try:
 
     while True:
@@ -182,7 +182,7 @@ if __name__ == "__main__":
       new_pixels: list[Utils.RGB] = [Utils.RGB(urandom.randint(0, Utils.UINT08_MAX), urandom.randint(0, Utils.UINT08_MAX), urandom.randint(0, Utils.UINT08_MAX)) for _ in range(size)]
       rounds: int = urandom.randint(300, 600)
       
-      logger_main.info(f"Fading NeoPixels to new colors over {rounds} steps.")
+      Logging.info(f"Fading NeoPixels to new colors over {rounds} steps.")
       
       tmp_pixels_list: list[Utils.RGB] = []
       for i in range(rounds):
@@ -195,16 +195,16 @@ if __name__ == "__main__":
         rgbLedPixels.set(tmp_pixels_list)
         Sleep.sync_ms(1)
       
-      logger_main.info(f"Current NeoPixel Utils.RGB values: {[p.get() for p in rgbLedPixels.get()]}")
+      Logging.info(f"Current NeoPixel Utils.RGB values: {[p.get() for p in rgbLedPixels.get()]}")
       Sleep.sync_ms(500) # Short pause before next fade
   except KeyboardInterrupt:
-    logger_main.info("RGBLEDPixels test interrupted.")
+    Logging.info("RGBLEDPixels test interrupted.")
   except Exception as e:
-    logger_main.error(f"RGBLEDPixels test failed: {e}")
+    Logging.error(f"RGBLEDPixels test failed: {e}")
   finally:
     # Clear NeoPixels
     try:
         rgbLedPixels.set([Utils.RGB(0,0,0) for _ in range(size)])
     except UnboundLocalError: # If rgbLedPixels was never initialized
         pass
-    logger_main.info("RGBLEDPixels test ended.")
+    Logging.info("RGBLEDPixels test ended.")
