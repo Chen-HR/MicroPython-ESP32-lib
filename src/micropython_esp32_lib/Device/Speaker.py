@@ -141,7 +141,6 @@ Equal.B5 = Equal(Equal.calculate_frequency(Equal.A4_REF_FREQ, 14))  # ~= 987.77 
 # class TWELVE(Twelve): # G, S, J, Z, Y
 #   ...
 
-
 class NoteEvent:
   def __init__(self, pitch: Temperament, amplitude: float, duration_ms: int):
     self.pitch = pitch
@@ -172,11 +171,16 @@ class Speaker:
     # Quiet the speaker by setting duty cycle to 0, not by setting freq to 0.
     self.main.duty_u16(0)
     
-  def play(self, noteEvents: list[NoteEvent]):
+  def sync_play(self, noteEvents: list[NoteEvent]):
     for noteEvent in noteEvents:
       self.set(noteEvent)
       # This part is blocking and should be used with caution in async code
       Sleep.sync_ms(noteEvent.duration_ms)
+  async def async_play(self, noteEvents: list[NoteEvent]):
+    for noteEvent in noteEvents:
+      self.set(noteEvent)
+      # This part is blocking and should be used with caution in async code
+      await Sleep.async_ms(noteEvent.duration_ms)
       
   def __del__(self):
     self.quiet()

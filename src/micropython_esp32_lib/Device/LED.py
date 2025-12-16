@@ -67,7 +67,7 @@ class RGBLEDPixels:
   def set(self, pixels: list[Utils.RGB]) -> None:
     # Ensure the new list has the correct size
     if len(pixels) != self.size:
-        raise ValueError(f"Expected {self.size} pixels, but got {len(pixels)}")
+      raise ValueError(f"Expected {self.size} pixels, but got {len(pixels)}")
     self.pixels = pixels # Update internal reference first
     for i in range(self.size):
       self.neopixel[i] = self.pixels[i].get() # Use self.pixels[i] directly

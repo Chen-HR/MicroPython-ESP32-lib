@@ -1,7 +1,12 @@
+"""
+# file: ./Utils/Logging.py
+"""
+# TODO: add async support
+
 import abc
 import sys
-import logging
-# import typing
+# import logging # Type hints will not be available if this code inherits from logging.
+# from typing import IO, TextIO, Never
 
 try: 
   from ..System import Time
@@ -17,7 +22,6 @@ try:
 except ImportError:
   from micropython_esp32_lib.System.Lock import allocate_lock, Lock
 _log_locker: Lock = allocate_lock() # type: ignore
-
 
 class Level:
   def __init__(self, code: int, name: str):
@@ -98,8 +102,8 @@ class StreamHandler(Handler): # redo from logging.StreamHandler
   def __init__(self, stream = _log_stream, terminator: str = "\n"):
     """
     Args:
-        stream (typing.IO, optional): _description_. Defaults to _log_stream.
-        terminator (str, optional): _description_. Defaults to "\\n".
+        stream (IO, optional): The stream to write the log messages to. Defaults. Defaults to _log_stream.
+        terminator (str, optional): The string to append at the end of each log. Defaults to "\\n".
     """
     super().__init__()
     self.stream = stream
@@ -107,18 +111,16 @@ class StreamHandler(Handler): # redo from logging.StreamHandler
   def close(self):
     if hasattr(self.stream, "flush"):
       self.stream.flush() # type: ignore
-  def _lock(self, record: Record):
-    global _log_locker
-    try:
-      _log_locker.acquire()
-      self.stream.write(self.format(record) + self.terminator) # type: ignore
-    except Exception as e:
-      raise e
-    finally:
-      _log_locker.release()
   def emit(self, record: Record):
     if record.levelno >= self.level.code:
-      self._lock(record)
+      global _log_locker
+      try:
+        _log_locker.acquire()
+        self.stream.write(self.format(record) + self.terminator) # type: ignore
+      except Exception as e:
+        raise e
+      finally:
+        _log_locker.release()
 class FileHandler(StreamHandler):
   def __init__(self, filename: str, mode: str="a", encoding: str="UTF-8"):
     super().__init__(stream=open(filename, mode=mode, encoding=encoding))
@@ -184,9 +186,9 @@ def config_stream(name: str | None = None, stream = _log_stream, level: Level = 
   """_summary_
 
   Args:
-      name (str | None, optional): _description_. Defaults to None.
-      stream (typing.TextIO, optional): _description_. Defaults to _log_stream.
-      level (Level, optional): _description_. Defaults to _log_level.
+    name (str | None, optional): The name of the logger. Defaults to None.
+    stream (typing.IO, optional): The stream to write the log messages to. Defaults to _log_stream.
+    level (Level, optional): The level of the logger. Defaults to _log_level.
   """
   global _loggers
   if name is None: name = "root"

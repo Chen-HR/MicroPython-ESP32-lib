@@ -30,27 +30,45 @@ class Status:
   UNABLE_TO_ACTIVATE_CONNECTOR  : "Status"
   UNABLE_TO_CLOSE_OLD_CONNECTION : "Status"
   WIFI_INTERNAL_ERROR        : "Status"
-  IDLE            : "Status"
-  CONNECTING      : "Status"
-  GOT_IP          : "Status"
-  NO_AP_FOUND     : "Status"
-  WRONG_PASSWORD  : "Status"
-  CONNECT_FAIL    : "Status"
+  BEACON_TIMEOUT                    : "Status"
+  NO_AP_FOUND                       : "Status"
+  WRONG_PASSWORD                    : "Status"
+  ASSOC_FAIL                        : "Status"
+  CONNECT_FAIL                      : "Status"
+  HANDSHAKE_TIMEOUT                 : "Status"
+  NO_AP_FOUND_W_COMPATIBLE_SECURITY : "Status"
+  NO_AP_FOUND_IN_AUTHMODE_THRESHOLD : "Status"
+  NO_AP_FOUND_IN_RSSI_THRESHOLD     : "Status"
+  IDLE                              : "Status"
+  CONNECTING                        : "Status"
+  GOT_IP                            : "Status"
 Status.UNABLE_TO_ACTIVATE_CONNECTOR   = Status(-1                       , "Unable to activate connector") 
 Status.UNABLE_TO_CLOSE_OLD_CONNECTION = Status(-2                       , "Unable to close old connection") 
 Status.WIFI_INTERNAL_ERROR            = Status(-3                       , "OSError: WiFi Internal Error") 
-try:                   Status.IDLE           = Status(network.STAT_IDLE          , "Idle"          ) # type: ignore
-except AttributeError: Status.IDLE           = Status(1000                       , "Idle"          )
-try:                   Status.CONNECTING     = Status(network.STAT_CONNECTING    , "Connecting"    ) # type: ignore
-except AttributeError: Status.CONNECTING     = Status(1001                       , "Connecting"    )
-try:                   Status.GOT_IP         = Status(network.STAT_GOT_IP        , "Got IP"        ) # type: ignore
-except AttributeError: Status.GOT_IP         = Status(1010                       , "Got IP"        )
-try:                   Status.NO_AP_FOUND    = Status(network.STAT_NO_AP_FOUND   , "No AP Found"   ) # type: ignore
-except AttributeError: Status.NO_AP_FOUND    = Status(201                        , "No AP Found"   )
-try:                   Status.WRONG_PASSWORD = Status(network.STAT_WRONG_PASSWORD, "Wrong Password") # type: ignore
-except AttributeError: Status.WRONG_PASSWORD = Status(202                        , "Wrong Password")
-try:                   Status.CONNECT_FAIL   = Status(network.STAT_CONNECT_FAIL  , "Connect Fail"  ) # type: ignore
-except AttributeError: Status.CONNECT_FAIL   = Status(203                        , "Connect Fail"  )
+try:                   Status.BEACON_TIMEOUT                    = Status(network.STAT_BEACON_TIMEOUT                    , "Beacon Timeout"                   ) # type: ignore
+except AttributeError: Status.BEACON_TIMEOUT                    = Status( 200                                           , "Beacon Timeout"                   )
+try:                   Status.NO_AP_FOUND                       = Status(network.STAT_NO_AP_FOUND                       , "No AP Found"                      ) # type: ignore
+except AttributeError: Status.NO_AP_FOUND                       = Status( 201                                           , "No AP Found"                      )
+try:                   Status.WRONG_PASSWORD                    = Status(network.STAT_WRONG_PASSWORD                    , "Wrong Password"                   ) # type: ignore
+except AttributeError: Status.WRONG_PASSWORD                    = Status( 202                                           , "Wrong Password"                   )
+try:                   Status.ASSOC_FAIL                        = Status(network.STAT_ASSOC_FAIL                        , "Assoc Fail"                       ) # type: ignore
+except AttributeError: Status.ASSOC_FAIL                        = Status( 203                                           , "Assoc Fail"                       )
+try:                   Status.CONNECT_FAIL                      = Status(network.STAT_CONNECT_FAIL                      , "Connect Fail"                     ) # type: ignore
+except AttributeError: Status.CONNECT_FAIL                      = Status( 203                                           , "Connect Fail"                     )
+try:                   Status.HANDSHAKE_TIMEOUT                 = Status(network.STAT_HANDSHAKE_TIMEOUT                 , "Handshake Timeout"                ) # type: ignore
+except AttributeError: Status.HANDSHAKE_TIMEOUT                 = Status( 204                                           , "Handshake Timeout"                )
+try:                   Status.NO_AP_FOUND_W_COMPATIBLE_SECURITY = Status(network.STAT_NO_AP_FOUND_W_COMPATIBLE_SECURITY , "No AP Found (Compatible Security)") # type: ignore
+except AttributeError: Status.NO_AP_FOUND_W_COMPATIBLE_SECURITY = Status( 210                                           , "No AP Found (Compatible Security)")
+try:                   Status.NO_AP_FOUND_IN_AUTHMODE_THRESHOLD = Status(network.STAT_NO_AP_FOUND_IN_AUTHMODE_THRESHOLD , "No AP Found (AuthMode Threshold)" ) # type: ignore
+except AttributeError: Status.NO_AP_FOUND_IN_AUTHMODE_THRESHOLD = Status( 211                                           , "No AP Found (AuthMode Threshold)" )
+try:                   Status.NO_AP_FOUND_IN_RSSI_THRESHOLD     = Status(network.STAT_NO_AP_FOUND_IN_RSSI_THRESHOLD     , "No AP Found (RSSI Threshold)"     ) # type: ignore
+except AttributeError: Status.NO_AP_FOUND_IN_RSSI_THRESHOLD     = Status( 212                                           , "No AP Found (RSSI Threshold)"     )
+try:                   Status.IDLE                              = Status(network.STAT_IDLE                              , "Idle"                             ) # type: ignore
+except AttributeError: Status.IDLE                              = Status(1000                                           , "Idle"                             )
+try:                   Status.CONNECTING                        = Status(network.STAT_CONNECTING                        , "Connecting"                       ) # type: ignore
+except AttributeError: Status.CONNECTING                        = Status(1001                                           , "Connecting"                       )
+try:                   Status.GOT_IP                            = Status(network.STAT_GOT_IP                            , "Got IP"                           ) # type: ignore
+except AttributeError: Status.GOT_IP                            = Status(1010                                           , "Got IP"                           )
 
 class PowerManagement:
   """WLAN power management modes (network.WLAN.PM_*)"""
@@ -77,6 +95,72 @@ try:                   PowerManagement.PERFORMANCE = PowerManagement(network.WLA
 except AttributeError: PowerManagement.PERFORMANCE = PowerManagement(1                          , "PERFORMANCE"   )
 try:                   PowerManagement.POWERSAVE   = PowerManagement(network.WLAN.PM_POWERSAVE  , "POWERSAVE"     ) # type: ignore
 except AttributeError: PowerManagement.POWERSAVE   = PowerManagement(2                          , "POWERSAVE"     )
+
+
+class Security:
+  """WLAN security modes (network.WLAN.SEC_*)"""
+  def __init__(self, code: int, name: str):
+    self.code: int = code
+    self.name: str = name
+  def __str__(self) -> str:
+    return f"Security({self.code}, {self.name})"
+  def __eq__(self, other: "Security") -> bool: # type: ignore
+    return self.code == other.code and self.name == other.name
+  @classmethod
+  def query(cls, code: int) -> "Security":
+    for security in cls.__dict__.values():
+      if isinstance(security, cls):
+        if security.code == code:
+          return security
+    raise ValueError(f"Unknown Security code: {code}")
+  OPEN                    : "Security"
+  WEP                     : "Security"
+  WPA                     : "Security"
+  WPA2                    : "Security"
+  WPA_WPA2                : "Security"
+  WPA2_ENT                : "Security"
+  WPA3                    : "Security"
+  WPA2_WPA3               : "Security"
+  WAPI                    : "Security"
+  OWE                     : "Security"
+  WPA3_ENT_192            : "Security"
+  WPA3_EXT_PSK            : "Security"
+  WPA3_EXT_PSK_MIXED_MODE : "Security"
+  DPP                     : "Security"
+  WPA3_ENT                : "Security"
+  WPA2_WPA3_ENT           : "Security"
+try:                   Security.OPEN                    = Security(network.WLAN.SEC_OPEN                    , "OPEN"                    ) # type: ignore
+except AttributeError: Security.OPEN                    = Security(0                          , "OPEN"                    )
+try:                   Security.WEP                     = Security(network.WLAN.SEC_WEP                     , "WEP"                     ) # type: ignore
+except AttributeError: Security.WEP                     = Security(1                          , "WEP"                     )
+try:                   Security.WPA                     = Security(network.WLAN.SEC_WPA                     , "WPA"                     ) # type: ignore
+except AttributeError: Security.WPA                     = Security(2                          , "WPA"                     )
+try:                   Security.WPA2                    = Security(network.WLAN.SEC_WPA2                    , "WPA2"                    ) # type: ignore
+except AttributeError: Security.WPA2                    = Security(3                          , "WPA2"                    )
+try:                   Security.WPA_WPA2                = Security(network.WLAN.SEC_WPA_WPA2                , "WPA_WPA2"                ) # type: ignore
+except AttributeError: Security.WPA_WPA2                = Security(4                          , "WPA_WPA2"                )
+try:                   Security.WPA2_ENT                = Security(network.WLAN.SEC_WPA2_ENT                , "WPA2_ENT"                ) # type: ignore
+except AttributeError: Security.WPA2_ENT                = Security(5                          , "WPA2_ENT"                )
+try:                   Security.WPA3                    = Security(network.WLAN.SEC_WPA3                    , "WPA3"                    ) # type: ignore
+except AttributeError: Security.WPA3                    = Security(6                          , "WPA3"                    )
+try:                   Security.WPA2_WPA3               = Security(network.WLAN.SEC_WPA2_WPA3               , "WPA2_WPA3"               ) # type: ignore
+except AttributeError: Security.WPA2_WPA3               = Security(7                          , "WPA2_WPA3"               )
+try:                   Security.WAPI                    = Security(network.WLAN.SEC_WAPI                    , "WAPI"                    ) # type: ignore
+except AttributeError: Security.WAPI                    = Security(8                          , "WAPI"                    )
+try:                   Security.OWE                     = Security(network.WLAN.SEC_OWE                     , "OWE"                     ) # type: ignore
+except AttributeError: Security.OWE                     = Security(9                          , "OWE"                     )
+try:                   Security.WPA3_ENT_192            = Security(network.WLAN.SEC_WPA3_ENT_192            , "WPA3_ENT_192"            ) # type: ignore
+except AttributeError: Security.WPA3_ENT_192            = Security(10                         , "WPA3_ENT_192"            )
+try:                   Security.WPA3_EXT_PSK            = Security(network.WLAN.SEC_WPA3_EXT_PSK            , "WPA3_EXT_PSK"            ) # type: ignore
+except AttributeError: Security.WPA3_EXT_PSK            = Security(11                         , "WPA3_EXT_PSK"            )
+try:                   Security.WPA3_EXT_PSK_MIXED_MODE = Security(network.WLAN.SEC_WPA3_EXT_PSK_MIXED_MODE , "WPA3_EXT_PSK_MIXED_MODE" ) # type: ignore
+except AttributeError: Security.WPA3_EXT_PSK_MIXED_MODE = Security(12                         , "WPA3_EXT_PSK_MIXED_MODE" )
+try:                   Security.DPP                     = Security(network.WLAN.SEC_DPP                     , "DPP"                     ) # type: ignore
+except AttributeError: Security.DPP                     = Security(13                         , "DPP"                     )
+try:                   Security.WPA3_ENT                = Security(network.WLAN.SEC_WPA3_ENT                , "WPA3_ENT"                ) # type: ignore
+except AttributeError: Security.WPA3_ENT                = Security(14                         , "WPA3_ENT"                )
+try:                   Security.WPA2_WPA3_ENT           = Security(network.WLAN.SEC_WPA2_WPA3_ENT           , "WPA2_WPA3_ENT"           ) # type: ignore
+except AttributeError: Security.WPA2_WPA3_ENT           = Security(15                         , "WPA2_WPA3_ENT"           )
 
 class Mode:
   """WLAN operating modes (network.*_IF)"""
@@ -130,7 +214,7 @@ class Config:
                 mac: bytes | None = None,
                 channel: int | None = None,
                 reconnects: int | None = None,
-                security = None, 
+                security: Security | None = None, 
                 hidden: bool | None = None,
                 key: str | None = None,
                 txpower: int | float | None = None,
@@ -148,7 +232,7 @@ class Config:
       mac (bytes | None): The MAC address of the host.
       channel (int | None): The channel of the WLAN network to connect to.
       reconnects (int | None): The number of reconnects to attempt.
-      security (None): The security of the WLAN network to connect to.
+      security (Security | None): The security of the WLAN network to connect to.
       hidden (bool | None): Whether the WLAN network is hidden or not.
       key (str | None): The key of the WLAN network to connect to.
       txpower (int | float | None): The transmission power of the WLAN network to connect to.
@@ -164,7 +248,7 @@ class Config:
     self.mac: bytes | None = mac
     self.channel: int | None = channel
     self.reconnects: int | None = reconnects
-    self.security = security
+    self.security: Security | None = security
     self.hidden: bool | None = hidden
     self.key: str | None = key
     self.txpower: int | float | None = txpower
@@ -200,7 +284,7 @@ class Config:
       if self.reconnects is not None:
         config['reconnects'] = self.reconnects
       if self.security is not None:
-        config['security'] = self.security
+        config['security'] = self.security.code
       if self.hidden is not None:
         config['hidden'] = self.hidden
       if self.key is not None:
@@ -208,12 +292,13 @@ class Config:
       if self.txpower is not None:
         config['txpower'] = self.txpower
       if self.pm is not None:
-        config['pm'] = self.pm
+        config['pm'] = self.pm.code
     except Exception as e:
       raise e
     return config
 class Connector:
-  def __init__(self, interface: Mode = Mode.STA, hostname: str | None = None, retry: int = 8, interval_ms: int = 200, timeout_ms: int = 10000, logger: Logging.Logger | None = None) -> None:
+  def __init__(self, interface: Mode = Mode.STA, hostname: str | None = None, 
+               retry: int = 8, interval_ms: int = 256, timeout_ms: int = 8192, logger: Logging.Logger | None = None) -> None:
     """Initializes the Wi-Fi Connector with the given parameters.
     Arg:
       interface (Mode): The interface to use for Wi-Fi connection. Defaults to Mode.STA.
@@ -252,7 +337,10 @@ class Connector:
     
     # Apply static IP configuration if provided
     if 'ip' in config_dict:
-      ip_config_tuple = (config_dict['ip'], config_dict.get('subnet', '255.255.255.0'), config_dict.get('gateway', '0.0.0.0'), config_dict.get('dns', '8.8.8.8'))
+      ip_config_tuple = (config_dict['ip'], 
+                         config_dict.get('subnet', '255.255.255.0'), 
+                         config_dict.get('gateway', '0.0.0.0'), 
+                         config_dict.get('dns', '8.8.8.8'))
       self.wlan.ifconfig(tuple(ip_config_tuple))
       if self.logger is not None: self.logger.debug(f"Static IP configuration applied: {ip_config_tuple}")
 
@@ -270,10 +358,9 @@ class Connector:
           # Log non-critical errors for unsupported config keys
           raise Exception(f"Warning: Could not set config param '{key}'. Error: {e}")
   def isConnecting(self) -> bool:
-    if self.logger is not None: self.logger.debug("Checking is connecting...")
-    return Status.query(self.wlan.status()) in (Status.CONNECTING, Status.IDLE)
-  def notConnecting(self) -> bool:
-    return not self.isConnecting()
+    status = Status.query(self.wlan.status())
+    if self.logger is not None: self.logger.debug(f"Checking is connecting, current Status is {status}.")
+    return status in (Status.CONNECTING, Status.IDLE)
   def getAvailableNetworks(self) -> list[WLANScanData]:
     if not self.wlan.active():
       self.wlan.active(True)
@@ -312,45 +399,25 @@ class SyncConnector(Connector):
     Returns:
       bool: True if the Wi-Fi interface was successfully activated, False otherwise.
     """
-    if not self.wlan.active():
-      # self.logger.info("Activing... ")
+    if self.wlan.active(): return True
+    for _ in range(self.retry):
       self.wlan.active(True)
-      for i in range(self.retry):
-        if Sleep.sync_until_sync(lambda: self.wlan.active(), timeout_ms=self.timeout_ms, interval_ms=self.interval_ms):
-          break
-        # self.logger.info("Activing... ")
-      if self.wlan.active():
-        # self.logger.info("Activated.")
-        return True
-      else:
-        # self.logger.warning("Failed to activate.")
-        return False
-    else:
-      # self.logger.info("WiFi is already actived.")
-      return True
-    
+      if Sleep.sync_until_sync(lambda: self.wlan.active(), self.timeout_ms, self.interval_ms):
+        break
+    return self.wlan.active()
   def deactivate(self) -> bool:
     """Deactivates the Wi-Fi interface.
 
     Returns:
       bool: True if the Wi-Fi interface was successfully deactivated, False otherwise.
     """
-    if self.wlan.active():
-      # self.logger.info("Deactiving... ")
+    if not self.wlan.active(): return True
+    for _ in range(self.retry):
       self.wlan.active(False)
-      for i in range(self.retry):
-        if Sleep.sync_until_sync(lambda: not self.wlan.active(), timeout_ms=self.timeout_ms, interval_ms=self.interval_ms):
-          break
-        # self.logger.info("Deactiving... ")
-      if not self.wlan.active():
-        # self.logger.info("Deactivated.")
-        return True
-      else:
-        # self.logger.warning("Failed to deactivate.")
-        return False
-    else:
-      # self.logger.info("WiFi is already deactivated.")
-      return True
+      if Sleep.sync_until_sync(lambda: not self.wlan.active(), self.timeout_ms, self.interval_ms):
+        break
+    return not self.wlan.active()
+
   def connect(self, config: Config) -> Status:
     """Connects to a Wi-Fi network.
 
@@ -358,75 +425,54 @@ class SyncConnector(Connector):
       bool: True if the connection was successfully established, False otherwise.
     """
     # Ensure the interface is active
-    if not self.wlan.active():
-      if not self.activate():
-        return Status.UNABLE_TO_ACTIVATE_CONNECTOR
-      Sleep.sync_ms(self.interval_ms)
+    if not self.wlan.active() and not self.activate():
+      return Status.UNABLE_TO_ACTIVATE_CONNECTOR
 
     # Ensure the interface is disconnected
-    if self.wlan.isconnected():
-      if not self.disconnect():
-        if self.logger is not None: self.logger.warning("Failed to disconnect from current network.")
-        return Status.UNABLE_TO_CLOSE_OLD_CONNECTION
-      Sleep.sync_ms(self.interval_ms)
+    if self.wlan.isconnected() and not self.disconnect():
+      return Status.UNABLE_TO_CLOSE_OLD_CONNECTION
 
     # Apply configuration
-    if self.logger is not None: self.logger.info(f"Trying to connect to \"{config.ssid}\"...")
     self._config_(config)
-    try:
-      self.wlan.connect(config.ssid, config.password if config.password is not None else "")
-    except OSError: # WiFi Internal Error
-      # raise Exception(f"Failed to connect to \"{config.ssid}\". Error: {error}")
-      self.deactivate()
-      return Status.WIFI_INTERNAL_ERROR
 
     # Wait for the connection process to complete
-    if self.logger is not None: self.logger.info(f"Connecting to \"{config.ssid}\"...")
-    Sleep.sync_ms(self.interval_ms)
-    if self.isConnecting():
-      for i in range(self.retry):
-        if self.logger is not None: self.logger.info(f"Wifi connecting... ({i+1}/{self.retry})")
-        if Sleep.sync_until_sync(lambda: not self.isConnecting(), timeout_ms=self.timeout_ms, interval_ms=self.interval_ms):
-          if self.logger is not None: self.logger.info("Wifi connected.")
-          break
-        else:
-          if self.logger is not None: self.logger.warning("Wifi connection timeout.")
+    for i in range(self.retry):
+      if self.logger is not None: self.logger.info(f"Wifi connecting... ({i+1}/{self.retry})")
+      try:
+        self.wlan.connect(config.ssid, config.password)
+        if Sleep.sync_until_sync(lambda: not self.isConnecting(), self.timeout_ms, self.interval_ms):
           return Status.query(self.wlan.status())
-
+      except OSError as error: # WiFi Internal Error
+        if self.logger is not None: self.logger.warning("WiFi Internal Error")
+        # return Status.WIFI_INTERNAL_ERROR
     return Status.query(self.wlan.status())
-  def tryConnect(self, configs: list[Config], interval_ms: int = 500) -> bool: # TODO: with `wlan.scan()` -> list[tuple[bytes, bytes, int, int, int, bool]] # list[tuple[SSID[bytes], BSSID[bytes], Channel[int], RSSI[int], Auth[int], Hidden[bool]]]
+  def tryConnect(self, configs: list[Config], encoding: str = "utf-8") -> bool:
     """Connects to a Wi-Fi network using the provided list of configurations.
 
     Args:
       configs (list[Config]): The list of configurations to use when connecting to the Wi-Fi network.
+      encoding (str, optional): The encoding to use for the SSID. Defaults to "utf-8".
 
     Returns:
       bool: True if the connection was successfully established, False otherwise.
     """
-    # for config in configs:
-    #   connectStatus = self.connect(config)
-    #   if connectStatus == Status.GOT_IP:
-    #     if self.logger is not None: self.logger.info(f"Connected to \"{config.ssid}\"")
-    #     return True
-    #   else:
-    #     if self.logger is not None: self.logger.warning(f"Failed to connect to \"{config.ssid}\", status: {connectStatus}")
-    #   Sleep.sync_ms(interval_ms)
-    # return False
     # Ensure the interface is active
-    if not self.wlan.active():
-      self.activate()
-      Sleep.sync_ms(self.interval_ms)
+    if not self.wlan.active() and not self.activate():
+      return False
+
+    # Try to connect to the available networks
     connectable: list[WLANScanData] = self.getAvailableNetworks()
     for config in configs:
+      config_hidden: bool = config.hidden if config.hidden is not None else False
       for scanData in connectable:
-        if scanData.ssid == config.ssid.encode("utf-8"): # type: ignore
+        if config_hidden or scanData.ssid.decode(encoding) == (config.ssid if encoding is not None else ""):
           connectStatus = self.connect(config)
           if connectStatus == Status.GOT_IP:
-            if self.logger is not None: self.logger.info(f"Connected to \"{config.ssid}\"")
+            if self.logger is not None: self.logger.info(f"Sussessfully Connected to \"{config.ssid}\"")
             return True
           else:
             if self.logger is not None: self.logger.warning(f"Failed to connect to \"{config.ssid}\", status: {connectStatus}")
-            Sleep.sync_ms(interval_ms)
+            Sleep.sync_ms(self.interval_ms)
     return False
   def disconnect(self) -> bool:
     """Disconnects from the Wi-Fi network.
@@ -434,30 +480,18 @@ class SyncConnector(Connector):
     Returns:
       bool: True if the disconnection was successful, False otherwise.
     """
-    if self.wlan.isconnected():
-      self.wlan.disconnect()
-      # Wait for disconnect
-      for i in range(self.retry):
-        # self.logger.info("Wifi disconnecting... ({}/{})".format(i+1, retry_count))
-        if Sleep.sync_until_sync(lambda: not self.wlan.isconnected(), timeout_ms=self.timeout_ms, interval_ms=self.interval_ms):
-          # self.logger.info("Wifi disconnected.")
-          return True
-        else:
-          pass
-          # self.logger.warning("Wifi disconnect timeout.")
-      if not self.wlan.isconnected():
-        # self.logger.info("Wifi disconnected.")
-        return True
-      else:
-        # self.logger.warning("Wifi disconnect failed.")
-        return False
-    else:
-      # self.logger.info("WiFi is not connected.")
+    if not self.wlan.isconnected():
       return True
-  def __del__(self):
+    for _ in range(self.retry):
+      self.wlan.disconnect()
+      if Sleep.sync_until_sync(lambda: not self.wlan.isconnected(), self.timeout_ms, self.interval_ms):
+        break
+    return not self.wlan.isconnected()
+  def delete(self):
     self.disconnect()
     self.deactivate()
-    # self.logger.info("WiFi connection closed.")
+  def __del__(self):
+    self.delete()
 
 class AsyncConnector(Connector):
   """Handles Asynchronous activation, connection, and configuration of the Wi-Fi interface."""
@@ -467,45 +501,25 @@ class AsyncConnector(Connector):
     Returns:
       bool: True if the Wi-Fi interface was successfully activated, False otherwise.
     """
-    if not self.wlan.active():
-      # self.logger.info("Activing... ")
+    if self.wlan.active(): return True
+    for _ in range(self.retry):
       self.wlan.active(True)
-      for i in range(self.retry):
-        if await Sleep.async_until_sync(lambda: self.wlan.active(), timeout_ms=self.timeout_ms, interval_ms=self.interval_ms):
-          break
-        # self.logger.info("Activing... ")
-      if self.wlan.active():
-        # self.logger.info("Activated.")
-        return True
-      else:
-        # self.logger.warning("Failed to activate.")
-        return False
-    else:
-      # self.logger.info("WiFi is already actived.")
-      return True
-    
+      if await Sleep.async_until_sync(lambda: self.wlan.active(), self.timeout_ms, self.interval_ms):
+        break
+    return self.wlan.active()
   async def deactivate(self) -> bool:
     """Deactivates the Wi-Fi interface.
 
     Returns:
       bool: True if the Wi-Fi interface was successfully deactivated, False otherwise.
     """
-    if self.wlan.active():
-      # self.logger.info("Deactiving... ")
+    if not self.wlan.active(): return True
+    for _ in range(self.retry):
       self.wlan.active(False)
-      for i in range(self.retry):
-        if await Sleep.async_until_sync(lambda: not self.wlan.active(), timeout_ms=self.timeout_ms, interval_ms=self.interval_ms):
-          break
-        # self.logger.info("Deactiving... ")
-      if not self.wlan.active():
-        # self.logger.info("Deactivated.")
-        return True
-      else:
-        # self.logger.warning("Failed to deactivate.")
-        return False
-    else:
-      # self.logger.info("WiFi is already deactivated.")
-      return True
+      if await Sleep.async_until_sync(lambda: not self.wlan.active(), self.timeout_ms, self.interval_ms):
+        break
+    return not self.wlan.active()
+
   async def connect(self, config: Config) -> Status:
     """Connects to a Wi-Fi network.
 
@@ -513,73 +527,54 @@ class AsyncConnector(Connector):
       bool: True if the connection was successfully established, False otherwise.
     """
     # Ensure the interface is active
-    if not self.wlan.active():
-      if not await self.activate():
-        return Status.UNABLE_TO_ACTIVATE_CONNECTOR
-      await Sleep.async_ms(self.interval_ms)
+    if not self.wlan.active() and not await self.activate():
+      return Status.UNABLE_TO_ACTIVATE_CONNECTOR
 
     # Ensure the interface is disconnected
-    if self.wlan.isconnected():
-      if not await self.disconnect():
-        if self.logger is not None: self.logger.warning("Failed to disconnect from current network.")
-        return Status.UNABLE_TO_CLOSE_OLD_CONNECTION
-      await Sleep.async_ms(self.interval_ms)
+    if self.wlan.isconnected() and not await self.disconnect():
+      return Status.UNABLE_TO_CLOSE_OLD_CONNECTION
 
     # Apply configuration
     self._config_(config)
-    try:
-      self.wlan.connect(config.ssid, config.password if config.password is not None else "")
-    except OSError: # WiFi Internal Error
-      # raise Exception(f"Failed to connect to \"{config.ssid}\". Error: {error}")
-      await self.deactivate()
-      return Status.WIFI_INTERNAL_ERROR
 
     # Wait for the connection process to complete
-    if self.logger is not None: self.logger.info(f"Connecting to \"{config.ssid}\"...")
-    await Sleep.async_ms(self.interval_ms)
-    if self.isConnecting():
-      for i in range(self.retry):
-        if self.logger is not None: self.logger.info(f"Wifi connecting... ({i+1}/{self.retry})")
-        if await Sleep.async_until_sync(lambda: not self.isConnecting(), timeout_ms=self.timeout_ms, interval_ms=self.interval_ms):
-          if self.logger is not None: self.logger.info("Wifi connected.")
-          break
-        else:
-          if self.logger is not None: self.logger.warning("Wifi connection timeout.")
+    for i in range(self.retry):
+      if self.logger is not None: self.logger.info(f"Wifi connecting... ({i+1}/{self.retry})")
+      try:
+        self.wlan.connect(config.ssid, config.password)
+        if await Sleep.async_until_sync(lambda: not self.isConnecting(), self.timeout_ms, self.interval_ms):
           return Status.query(self.wlan.status())
-
+      except OSError as error: # WiFi Internal Error
+        if self.logger is not None: self.logger.warning("WiFi Internal Error")
+        # return Status.WIFI_INTERNAL_ERROR
     return Status.query(self.wlan.status())
-  async def tryConnect(self, configs: list[Config], interval_ms: int = 500) -> bool:
+  async def tryConnect(self, configs: list[Config], encoding: str = "utf-8") -> bool:
     """Connects to a Wi-Fi network using the provided list of configurations.
 
     Args:
       configs (list[Config]): The list of configurations to use when connecting to the Wi-Fi network.
+      encoding (str, optional): The encoding to use for the SSID. Defaults to "utf-8".
 
     Returns:
       bool: True if the connection was successfully established, False otherwise.
     """
-    # for config in configs:
-    #   connectStatus = await self.connect(config)
-    #   if connectStatus == Status.GOT_IP:
-    #     if self.logger is not None: self.logger.info(f"Connected to \"{config.ssid}\"")
-    #     return True
-    #   else:
-    #     if self.logger is not None: self.logger.warning(f"Failed to connect to \"{config.ssid}\", status: {connectStatus}")
-    # await Sleep.async_ms(interval_ms)
-    # return False
-    if not self.wlan.active():
-      await self.activate()
-      Sleep.async_ms(self.interval_ms)
+    # Ensure the interface is active
+    if not self.wlan.active() and not await self.activate():
+      return False
+
+    # Try to connect to the available networks
     connectable: list[WLANScanData] = self.getAvailableNetworks()
     for config in configs:
+      config_hidden: bool = config.hidden if config.hidden is not None else False
       for scanData in connectable:
-        if scanData.ssid == config.ssid.encode("utf-8"): # type: ignore
+        if config_hidden or scanData.ssid.decode(encoding) == (config.ssid if encoding is not None else ""):
           connectStatus = await self.connect(config)
           if connectStatus == Status.GOT_IP:
-            if self.logger is not None: self.logger.info(f"Connected to \"{config.ssid}\"")
+            if self.logger is not None: self.logger.info(f"Sussessfully Connected to \"{config.ssid}\"")
             return True
           else:
             if self.logger is not None: self.logger.warning(f"Failed to connect to \"{config.ssid}\", status: {connectStatus}")
-            await Sleep.async_ms(interval_ms)
+            await Sleep.async_ms(self.interval_ms)
     return False
   async def disconnect(self) -> bool:
     """Disconnects from the Wi-Fi network.
@@ -587,29 +582,15 @@ class AsyncConnector(Connector):
     Returns:
       bool: True if the disconnection was successful, False otherwise.
     """
-    if self.wlan.isconnected():
-      self.wlan.disconnect()
-      # Wait for disconnect
-      for i in range(self.retry):
-        # self.logger.info("Wifi disconnecting... ({}/{})".format(i+1, retry_count))
-        if Sleep.async_until_sync(lambda: not self.wlan.isconnected(), timeout_ms=self.timeout_ms, interval_ms=self.interval_ms):
-          # self.logger.info("Wifi disconnected.")
-          return True
-        else:
-          pass
-          # self.logger.warning("Wifi disconnect timeout.")
-      if not self.wlan.isconnected():
-        # self.logger.info("Wifi disconnected.")
-        return True
-      else:
-        # self.logger.warning("Wifi disconnect failed.")
-        return False
-    else:
-      # self.logger.info("WiFi is not connected.")
+    if not self.wlan.isconnected():
       return True
+    for _ in range(self.retry):
+      self.wlan.disconnect()
+      if await Sleep.async_until_sync(lambda: not self.wlan.isconnected(), self.timeout_ms, self.interval_ms):
+        break
+    return not self.wlan.isconnected()
   async def delete(self):
     await self.disconnect()
     await self.deactivate()
   def __del__(self):
     uasyncio.get_event_loop().create_task(self.delete())
-    # self.logger.info("WiFi connection closed.")

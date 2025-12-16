@@ -9,6 +9,7 @@ import abc
 try:
   from ..System.Time import Timer
   from ..System.Time import Sleep
+  from ..System import Time
   from ..System import Digital
   from ..Utils import Logging
   from ..Utils import Flag
@@ -16,10 +17,13 @@ try:
 except ImportError:
   from micropython_esp32_lib.System.Time import Timer
   from micropython_esp32_lib.System.Time import Sleep
+  from micropython_esp32_lib.System import Time
   from micropython_esp32_lib.System import Digital
   from micropython_esp32_lib.Utils import Logging
   from micropython_esp32_lib.Utils import Flag
   from micropython_esp32_lib.Utils import ListenerHandler
+
+Logging.notset("Loading State...")
 
 class State:
   def __init__(self, code: int, name: str):
@@ -42,6 +46,9 @@ class State:
 State.BOUNCING = State(0, "BOUNCING")
 State.RELEASED = State(1, "RELEASED")
 State.PRESSED  = State(2, "PRESSED" )
+
+Logging.notset("Loading BaseButton...")
+
 class BaseButton(abc.ABC):
   def __init__(self, pin: machine.Pin, released_signal: Digital.Signal, interval_ms: int = 16):
     self.pin: machine.Pin = pin
@@ -64,6 +71,7 @@ class BaseButton(abc.ABC):
   async def isToPressed(self) -> bool:
     pass
 
+Logging.notset("Loading ImmediateDebounceButton...")
 
 class ImmediateDebounceButton(BaseButton):
   def __init__(self, pin: machine.Pin, released_signal: Digital.Signal, interval_ms: int = 16):
@@ -91,6 +99,8 @@ class ImmediateDebounceButton(BaseButton):
       if await self.isPressed(): return True
     return False
 
+Logging.notset("Loading CountFilteringImmediateDebounceButton...")
+
 class CountFilteringImmediateDebounceButton(ImmediateDebounceButton):
   def __init__(self, pin: machine.Pin, released_signal: Digital.Signal, interval_ms: int = 1, threshold: int = 16):
     super().__init__(pin, released_signal, interval_ms)
@@ -113,6 +123,8 @@ class CountFilteringImmediateDebounceButton(ImmediateDebounceButton):
     return await Digital.isChangedStably_async(self.pin, self.pressed_signal, self.released_signal, self.threshold, self.interval_ms)
   async def isToPressed(self) -> bool:
     return await Digital.isChangedStably_async(self.pin, self.released_signal, self.pressed_signal, self.threshold, self.interval_ms)
+
+Logging.notset("Loading StateDebounceButton...")
 
 class StateDebounceButton(BaseButton):
   def __init__(self, pin: machine.Pin, released_signal: Digital.Signal, interval_ms: int = 16):
@@ -148,6 +160,8 @@ class StateDebounceButton(BaseButton):
       if await self.isPressed():
         return True
     return False
+
+Logging.notset("Loading InterruptDrivenStateDebounceButton...")
 
 class InterruptDrivenStateDebounceButton(StateDebounceButton):
   class EdgeHandler(ListenerHandler.AsyncHandler):
@@ -222,20 +236,99 @@ class InterruptDrivenStateDebounceButton(StateDebounceButton):
     self._debounce_timer.deactivate()
     self._irq_listenerHandler.deactivate()
 
+Logging.notset("Loading OnPressedListener...")
 class OnPressedListener(ListenerHandler.AsyncListener):
   def __init__(self, button: BaseButton, interval_ms: int = 10):
+    super().__init__(button)
     self.button: BaseButton = button
     self.interval_ms: int = interval_ms
     # self.logger: Logging.Log = Logging.Log(log_name, log_level)
   async def listen(self, obj = None, *args, **kwargs) -> bool:
     return await self.button.isToPressed()
+Logging.notset("Loading OnReleasedListener...")
 class OnReleasedListener(ListenerHandler.AsyncListener):
   def __init__(self, button: BaseButton, interval_ms: int = 10):
+    super().__init__(button)
     self.button: BaseButton = button
     self.interval_ms: int = interval_ms
     # self.logger: Logging.Log = Logging.Log(log_name, log_level)
   async def listen(self, obj = None, *args, **kwargs) -> bool:
     return await self.button.isToReleased()
+  
+# Logging.notset("Loading OnClickListener...")
+# class OnClickListener(ListenerHandler.AsyncListener):
+#   """
+#   An asynchronous listener that triggers after a specified number of valid clicks.
+
+#   A valid click consists of a button press, an optional hold for a minimum duration,
+#   and a subsequent release.
+#   """
+#   class WaitState(object):
+#     def __init__(self, code: int, name: str):
+#       self.code: int = code
+#       self.name: str = name
+#     def __eq__(self, other: "OnClickListener.WaitState") -> bool: # type: ignore
+#       return self.code == other.code
+#     PRESS: "OnClickListener.WaitState"
+#     RELEASE: "OnClickListener.WaitState"
+#   WaitState.PRESS = WaitState(0, "PRESS")
+#   WaitState.RELEASE = WaitState(1, "RELEASE")
+#   def __init__(self, button: BaseButton, pressTime_ms: int = 0, times: int = 1):
+#     """
+#     Initializes the OnClickListener.
+
+#     Args:
+#       button (BaseButton): The button instance to monitor.
+#       pressTime_ms (int, optional): The minimum time in milliseconds the button
+#         must be held down for a press to be considered valid. If 0 or less,
+#         any press duration is valid. Defaults to 0.
+#       times (int, optional): The number of consecutive valid clicks required to
+#         trigger the listener. If 1 or less, a single click triggers it.
+#         Defaults to 1.
+#     """
+#     super().__init__(button)
+#     self.button: BaseButton = button
+#     self.pressTime_ms: int = pressTime_ms
+#     self.times: int = times if times > 0 else 1
+#     self._state: OnClickListener.WaitState = OnClickListener.WaitState.PRESS
+#     self._press_start_time: int = 0
+#     self._click_count: int = 0
+#   async def listen(self, obj = None, *args, **kwargs) -> bool:
+#     """
+#     Polls the button state to detect the click sequence.
+
+#     Returns:
+#       bool: True if the specified click sequence has been completed, False otherwise.
+#     """
+#     if self._state == OnClickListener.WaitState.PRESS:
+#       if await self.button.isToPressed():
+#         self._press_start_time = Time.current_ms()
+#         self._state = OnClickListener.WaitState.RELEASE
+#     elif self._state == OnClickListener.WaitState.RELEASE:
+#       # Check for release first
+#       if await self.button.isToReleased():
+#         hold_duration = Time.current_ms() - self._press_start_time
+#         # Check if the hold duration was sufficient
+#         if self.pressTime_ms <= 0 or hold_duration >= self.pressTime_ms:
+#           # This was a valid click, increment count
+#           self._click_count += 1
+#         else:
+#           # Released too early, reset the sequence
+#           self._click_count = 0
+#         # Reset state machine to wait for the next press
+#         self._state = OnClickListener.WaitState.PRESS
+#         # Check if the required number of clicks has been reached
+#         if self._click_count >= self.times:
+#           self._click_count = 0 # Reset for the next trigger
+#           return True
+#       # Also, check if the button is still being pressed. If not, something is wrong (e.g., bounce), so reset.
+#       # The `isToReleased` should handle debouncing, but this is a safeguard.
+#       elif not await self.button.isPressed():
+#         # The button is no longer pressed, but the "isToReleased" event was missed or did not fire.
+#         # This indicates a break in the sequence, so reset.
+#         self._click_count = 0
+#         self._state = OnClickListener.WaitState.PRESS
+#     return False
 
 if __name__ == "__main__":
   class TestSyncHandler(ListenerHandler.SyncHandler):
@@ -271,12 +364,15 @@ if __name__ == "__main__":
 
       await ListenerHandler.AsyncListenerSyncHandler(OnPressedListener (btn_c), TestSyncHandler()).activate()
       await ListenerHandler.AsyncListenerSyncHandler(OnReleasedListener(btn_c), TestSyncHandler()).activate()
+      # await ListenerHandler.AsyncListenerAsyncHandler(OnClickListener(btn_c, 0, 2), TestAsyncHandler()).activate()
+      # await ListenerHandler.AsyncListenerAsyncHandler(OnClickListener(btn_c, 500, 1), TestAsyncHandler()).activate()
       while True:
         await Sleep.async_s(1)
     asyncio.run(testSyncHandler())
+    while True:
+      Sleep.sync_s(1024)
   except KeyboardInterrupt:
     pass
   del btn_a
   del btn_b
   del btn_c
-

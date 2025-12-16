@@ -32,7 +32,7 @@ class AsyncHandler(BaseHandler):
 
 
 class BaseListener(abc.ABC):
-  def __init__(self, *args, **kwargs):
+  def __init__(self, obj = None, *args, **kwargs):
     """
     Initialize an Listener object with the given object and optional arguments and keyword arguments.
 
@@ -42,7 +42,7 @@ class BaseListener(abc.ABC):
     """
     self.args = args
     self.kwargs = kwargs
-    self.obj = None
+    self.obj = obj
 class SyncListener(BaseListener):
   @abc.abstractmethod
   def listen(self, obj = None, *args, **kwargs) -> bool: # TODO: support raise exception

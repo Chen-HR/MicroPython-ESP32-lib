@@ -211,6 +211,7 @@ class ListenerTimer:
       self.period_ms: int = period_ms
       self.mode: "ListenerTimer.Mode" = mode if mode is not None else ListenerTimer.DEFULT_MODE
       self.active = True
+      self.task: asyncio.Task | None = None
     async def listen(self):
       if self.active:
         await Sleep.async_ms(self.period_ms)
@@ -224,7 +225,7 @@ class ListenerTimer:
       if self.task is not None:
         self.task.cancel()
         self.task = None
-        self.active = False
+      self.active = False
     async def activate(self):
       if self.task is not None:
         self.deactivate()
