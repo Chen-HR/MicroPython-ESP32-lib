@@ -23,5 +23,8 @@ class BooleanFlag(Flag):
 class BooleanFlagListener(ListenerHandler.SyncListener):
   def __init__(self, flag: BooleanFlag):
     self.flag = flag
+  @property
+  def obj(self):
+    return self.flag
   def listen(self, obj = None, *args, **kwargs) -> bool:
     return self.flag.isActivate()
