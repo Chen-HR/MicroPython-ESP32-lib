@@ -26,7 +26,7 @@ except ImportError:
   from micropython_esp32_lib.Utils import Flag
   from micropython_esp32_lib.Utils import ListenerHandler
 
-logger = Logging.Logger("Button", Logging.Level.NOTSET)
+logger = Logging.Logger("Button", Logging.Level.WARNING)
 
 logger.notset("Loading State...")
 
